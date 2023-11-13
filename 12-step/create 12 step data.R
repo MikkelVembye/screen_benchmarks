@@ -145,6 +145,7 @@ step12_dat |>
     .by = human_code
   )
 
+saveRDS(step12_dat, file = "12-step/step12_dat.rds")
 
 
 
