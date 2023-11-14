@@ -21,23 +21,4 @@ screen_report_dat_raw <-
 # Til Anja: Du kan bruge glimpse() til at få overblik over variable navnene
 screen_report_dat_raw |> glimpse()
 
-# Read duplicate and delete refs 
-
-Deletedreferences1 <- read_csv("Deletedreferences1.html")
-View(Deletedreferences1)
-
-
-html <- read_html("Deletedreferences1.html")
-
-screen_report_dat_raw <- 
-  html |> 
-  html_element("table") |> 
-  html_table()
-
-screen_report_dat_raw |> glimpse()
-
-miss_refs_ids <- readRDS("screen_report_dat_raw")
-
-miss_refs_raw <- 
-  screen_report_dat_raw |> 
-  filter(ItemId %in% miss_refs_ids)
+# ANBO: Hertil har det fungeret fint og er kørt som det skal. Jeg har uploadet RIS-filer for deleted items samt inkluderede og ekskluderede på T/A, men kan ikke få den næste del af scriptet til at fungere (hvor vi trækker de deletede fra osv.) 
