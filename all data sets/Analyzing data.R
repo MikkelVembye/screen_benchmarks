@@ -47,7 +47,6 @@ dat |>
 
 
 # Visualizing conflict rates across review
-
 plot_dat <- 
   dat |> 
   summarise(
