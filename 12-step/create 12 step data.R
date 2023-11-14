@@ -24,6 +24,8 @@ miss_refs_raw <-
   screen_report_dat_raw |> 
   filter(ItemId %in% miss_refs_ids)
 
+# All studies coded by Martin Boeg was single screened. 
+# Therefore, we exclude these references
 boeg_refs <- 
   screen_report_dat_raw |> 
   select(-`I/E/D/S flag`) |> 
@@ -78,7 +80,7 @@ friends_excl <-
       as_tibble() |>
       select(author, eppi_id, title, abstract) |> # Using only relevant variables
       mutate(
-        human_code = 0
+        final_human_decision = 0
       )
   }
   ) |> 
@@ -90,7 +92,7 @@ friends_incl <-
   as_tibble() |>
   select(author, eppi_id, title, abstract) |> # Using only relevant variables
   mutate(
-    human_code = 1
+    final_human_decision = 1
   )
 
 step12_ris_dat <- bind_rows(friends_excl, friends_incl) 
@@ -126,14 +128,18 @@ screen_report_dat_filtered <-
 step12_dat <- 
   left_join(screen_report_dat_filtered, step12_ris_dat, by = join_by(eppi_id)) |> 
   select(-c(author_short, title_report)) |> 
-  relocate(exclude:include, .before = human_code) |> 
-  arrange(human_code) |> 
+  relocate(exclude:include, .before = final_human_decision) |> 
+  arrange(final_human_decision) |> 
   mutate(
+    review_authors = "Bøg et al. (2017)",
+    review = "12-step",
     studyid = 1:n(),
     abstract = str_remove_all(abstract, "\\<bold\\>"),
     conflict = if_else(!is.na(exclude) & !is.na(include), 1, 0)
   ) |> 
-  relocate(studyid, .after = eppi_id)
+  relocate(studyid, .after = eppi_id) |> 
+  relocate(author) |> 
+  relocate(review_authors:review)
 
   
 # Level of conflicts
@@ -142,10 +148,10 @@ step12_dat |>
     number_of_references = n(),
     number_of_conflicts = sum(conflict == 1), 
     percent_conflict = mean(conflict == 1),
-    .by = human_code
+    .by = final_human_decision
   )
 
-saveRDS(step12_dat, file = "12-step/step12_dat.rds")
+saveRDS(step12_dat, file = "all data sets/step12_dat.rds")
 
 
 
