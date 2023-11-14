@@ -23,11 +23,20 @@ screen_report_dat_raw |> glimpse()
 
 # Read duplicate and delete refs 
 
-library(readr)
-ExportedRis_deleted1 <- read_csv("ExportedRis_deleted1")
-View(Screen_on_Title_Abstract_full_coding_report_1_)
+Deletedreferences1 <- read_csv("Deletedreferences1.html")
+View(Deletedreferences1)
 
-miss_refs_ids <- readRDS("ExportedRis_deleted1")
+
+html <- read_html("Deletedreferences1.html")
+
+screen_report_dat_raw <- 
+  html |> 
+  html_element("table") |> 
+  html_table()
+
+screen_report_dat_raw |> glimpse()
+
+miss_refs_ids <- readRDS("screen_report_dat_raw")
 
 miss_refs_raw <- 
   screen_report_dat_raw |> 
