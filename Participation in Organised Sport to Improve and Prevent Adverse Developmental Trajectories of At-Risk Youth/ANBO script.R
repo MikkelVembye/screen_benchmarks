@@ -23,7 +23,11 @@ screen_report_dat_raw |> glimpse()
 
 # Read duplicate and delete refs 
 
-miss_refs_ids <- readRDS("")
+library(readr)
+ExportedRis_deleted1 <- read_csv("ExportedRis_deleted1")
+View(Screen_on_Title_Abstract_full_coding_report_1_)
+
+miss_refs_ids <- readRDS("ExportedRis_deleted1")
 
 miss_refs_raw <- 
   screen_report_dat_raw |> 
