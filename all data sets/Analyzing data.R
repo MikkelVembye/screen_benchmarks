@@ -86,7 +86,7 @@ plot_dat |>
 ggplot(aes(x = percent, y = review_authors, color = review_authors)) + 
   geom_point() +
   geom_vline(data = vline_dat, aes(xintercept = percent), linetype = "dashed") + 
-  #scale_x_continuous(limits = c(0.1,1), expand=c(0,0), breaks = seq(0L, 1L, 0.1)) +
+  scale_x_continuous(limits = c(0.5,1), breaks = seq(0L, 1L, 0.1)) +
   facet_grid(~metric) +
   theme_bw() +
   theme(
