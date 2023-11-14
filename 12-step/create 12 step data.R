@@ -41,7 +41,7 @@ boeg_refs <-
   ) |> 
   mutate(
     across(exclude1:include, ~ na_if(.x, "")),
-    across(exclude1:include, ~ str_replace_all(.x, " BÃ¸g", "Boeg"))
+    across(exclude1:include, ~ str_replace_all(.x, "BÃ¸g", "Boeg"))
   ) |> 
   arrange(eppi_id) |> 
   filter(eppi_id != "FullPath:") |>  # removing first row
@@ -73,7 +73,7 @@ screen_report_dat <-
 # Loading included and excluded studies
 ex_paths <- list.files("12-step/", pattern = "excl")
 
-friends_excl <- 
+step12_excl <- 
   map(ex_paths, ~ {
     revtools::read_bibliography(paste0("12-step/", .x)) |> 
       suppressWarnings() |> 
@@ -86,7 +86,7 @@ friends_excl <-
   ) |> 
   list_rbind()
 
-friends_incl <- 
+step12_incl <- 
   revtools::read_bibliography("12-step/12step_incl.ris") |> 
   suppressWarnings() |> 
   as_tibble() |>
@@ -95,7 +95,7 @@ friends_incl <-
     final_human_decision = 1
   )
 
-step12_ris_dat <- bind_rows(friends_excl, friends_incl) 
+step12_ris_dat <- bind_rows(step12_excl, step12_incl) 
 
 # ids til filter screen report data
 ids <- step12_ris_dat |> pull(eppi_id)
