@@ -72,25 +72,22 @@ plot_dat <-
   ) |> 
   mutate(
     metric = factor(metric, levels = c("Recall", "Specificity", "bAcc"))
-  ) |> 
-  rename(
-    TN = number_of_references_0,
-    TP = number_of_references_1,
-    FP = number_of_conflicts_0, 
-    FN = number_of_conflicts_1
-  )
+  ) 
 
 # Loading Vembye et al. screenings measures
 coteach_dat <- readRDS("all data sets/coteach_measure.rds")
 
-plot_dat <- bind_rows(plot_dat, coteach_dat)
+plot_dat <- 
+  bind_rows(plot_dat, coteach_dat) |> 
+  arrange(review_authors, metric)
+  
 
 vline_dat <- 
   plot_dat |> 
   summarise(
     percent = mean(percent),
     .by = metric
-  )
+  ) 
 
 
 plot_dat |> 
@@ -106,3 +103,18 @@ ggplot(aes(x = percent, y = review_authors, color = review_authors)) +
     axis.title.x = element_text(vjust = -0.75)
   ) +
   labs(x = "%", y = "Systematic review")
+
+# Total number of references
+plot_dat |> 
+  rowwise() |> 
+  mutate(
+    n_refs = sum(c_across(number_of_references_0:number_of_references_1))
+  ) |> 
+  group_by(review_authors) |> 
+  slice(1) |> 
+  ungroup() |> 
+  summarise(
+    refs = sum(n_refs)
+  )
+
+

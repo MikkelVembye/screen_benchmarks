@@ -22,10 +22,10 @@ coteach_dat <-
   tibble(
    review_authors = "Vembye et al. (2023)",
    review = "Co-teaching",
-   TP = TP, 
-   TN = TN,
-   FN = FN, 
-   FP = FP, 
+   number_of_references_0 = 7604, # The screening report from Covidence lacked 30 studies which are excluded here
+   number_of_references_1 = 373,
+   number_of_conflicts_0 = FP, 
+   number_of_conflicts_1 = FN,
    metric = factor(c("Recall", "Specificity", "bAcc"), levels = c("Recall", "Specificity", "bAcc")),
    percent = c(Recall, Specificity, bAcc)
   )
