@@ -98,7 +98,7 @@ sch_rev_dat <-
   relocate(exclude:include, .before = final_human_decision) |> 
   arrange(final_human_decision) |> 
   mutate(
-    review_authors = "Dietrichson et al. (2018, 2020, 2021)",
+    review_authors = "Dietrichson et al. (2020, 2021)",
     review = "School reviews",
     studyid = 1:n(),
     abstract = str_remove_all(abstract, "\\<bold\\>"),

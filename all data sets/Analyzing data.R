@@ -77,9 +77,23 @@ plot_dat <-
 # Loading Vembye et al. screenings measures
 coteach_dat <- readRDS("all data sets/coteach_measure.rds")
 
+
 plot_dat <- 
   bind_rows(plot_dat, coteach_dat) |> 
-  arrange(review_authors, metric)
+  arrange(review_authors, metric) |> 
+  mutate(
+    total_refs = number_of_references_0 + number_of_references_1,
+    se = case_when(
+      metric %in% "Recall" ~ sqrt((percent*(1-percent))/number_of_references_1),
+      metric %in% "Specificity" ~ sqrt((percent*(1-percent))/number_of_references_0),
+      metric %in% "bAcc" ~ sqrt((percent*(1-percent))/total_refs),
+      TRUE ~ NA_real_
+    ),
+    CI_L = percent - se * qnorm(.975), 
+    CI_U = percent + se * qnorm(.975),
+    
+    .by = review_authors
+  )
   
 
 vline_dat <- 
@@ -91,11 +105,11 @@ vline_dat <-
 
 
 plot_dat |> 
-ggplot(aes(x = percent, y = review_authors, color = review_authors)) + 
-  geom_point() +
+ggplot(aes(x = percent, xmin = CI_L, xmax = CI_U, y = review_authors, color = review_authors)) + 
+  geom_pointrange() +
   geom_vline(data = vline_dat, aes(xintercept = percent), linetype = "dashed") + 
-  scale_x_continuous(limits = c(0.5,1), breaks = seq(0L, 1L, 0.1)) +
-  facet_grid(~metric) +
+  #scale_x_continuous(limits = c(0.4,1), breaks = seq(0L, 1L, 0.1)) +
+  facet_grid(~metric, scales = "free") +
   theme_bw() +
   theme(
     legend.position="none",
