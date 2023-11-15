@@ -13,13 +13,13 @@ options(scipen = 10)
 options(dplyr.summarise.inform = FALSE) # Avoids summarize info from tidyverse
 
 # Loading data
-path <- list.files("all data sets/", pattern = "rds")
+path <- list.files("all data sets/", pattern = "dat.rds") 
 
 dat <- 
   map(path, ~ readRDS(paste0("all data sets/", .x))) |> 
   list_rbind()
 
-# Overall conflict rates
+# Overall conflict rates from raw data
 overall_rate <- 
   dat |> 
   summarise(
@@ -36,7 +36,7 @@ overall_rate <-
 bacc_overall <- sum(overall_rate$percent)/2
 bacc_overall
 
-# Conflict rates across review
+# Conflict rates across review from raw data
 dat |> 
   summarise(
     number_of_references = n(),
@@ -72,7 +72,18 @@ plot_dat <-
   ) |> 
   mutate(
     metric = factor(metric, levels = c("Recall", "Specificity", "bAcc"))
+  ) |> 
+  rename(
+    TN = number_of_references_0,
+    TP = number_of_references_1,
+    FP = number_of_conflicts_0, 
+    FN = number_of_conflicts_1
   )
+
+# Loading Vembye et al. screenings measures
+coteach_dat <- readRDS("all data sets/coteach_measure.rds")
+
+plot_dat <- bind_rows(plot_dat, coteach_dat)
 
 vline_dat <- 
   plot_dat |> 
@@ -94,4 +105,4 @@ ggplot(aes(x = percent, y = review_authors, color = review_authors)) +
     axis.title.y = element_text(vjust = +3),
     axis.title.x = element_text(vjust = -0.75)
   ) +
-  labs(x = "%", y = "Campbell systematic review")
+  labs(x = "%", y = "Systematic review")
