@@ -23,13 +23,15 @@ screen_report_dat_raw |> glimpse()
 
 # ANBO: Hertil har det fungeret fint og er kørt som det skal. Jeg har uploadet RIS og HTML-filer samt coding report. Tror ikke det er nødvendigt at fjerne deleted/duplicates her, da screeningsrapporten umiddelbart kun indeholder inkluderede studier.   
 
+# Mikkel: Jeg kan simpelthen ikke få den næste del af scriptet til at fungere - jeg kan se RIS-filerne i mit environment, men når jeg bruger kommandoerne, giver det bare 0 observationer, som om den ikke læser filerne?
+
 # Loading included and excluded studies
 
 ex_paths <- list.files("Outreach/", pattern = "excl")
 
-outreach_excl <- 
+Excluded_on_TA_1 <- 
   map(ex_paths, ~ {
-    revtools::read_bibliography(paste0("Outreach/ExportedRis.excludetitleabstract1")) |> 
+    revtools::read_bibliography(paste0("ExportedRIS.excludetitleabstract1.txt")) |> 
       suppressWarnings() |> 
       as_tibble() |>
       select(author, eppi_id, title, abstract) |> # Using only relevant variables
