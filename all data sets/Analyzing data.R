@@ -105,6 +105,14 @@ vline_dat <-
 
 
 plot_dat |> 
+mutate(
+  order_var = percent[1],
+  .by = review_authors
+) |> 
+arrange(desc(order_var)) |> 
+mutate(
+  review_authors = factor(review_authors, levels = unique(review_authors))
+) |> 
 ggplot(aes(x = percent, xmin = CI_L, xmax = CI_U, y = review_authors, color = review_authors)) + 
   geom_pointrange() +
   geom_vline(data = vline_dat, aes(xintercept = percent), linetype = "dashed") + 
