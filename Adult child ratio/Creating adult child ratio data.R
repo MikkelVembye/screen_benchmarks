@@ -20,7 +20,6 @@ screen_report_dat_raw |> glimpse()
 
 screen_report_dat <- 
   screen_report_dat_raw |> 
-  filter(str_detect(`I/E/D/S flag`, "(I)|(E)")) |> 
   select(-`I/E/D/S flag`) |> 
   rename(
     eppi_id= ItemId,
@@ -31,15 +30,8 @@ screen_report_dat <-
     exclude3 = `EXCLUDE Qualitative Research`,
     include = `INCLUDE on title & abstract`
   ) |> 
-  mutate(
-    across(exclude1:include, ~ na_if(.x, "")),
-    include = if_else(!is.na(include), "Included", NA_character_),
-    exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
-    exclude = if_else(exclude == TRUE, "Excluded", NA_character_)
-  ) |> 
-  select(-c(exclude1:exclude3)) |> 
-  relocate(exclude, .before = include) |> 
   arrange(eppi_id) 
+
 
 # Loading included and excluded studies
 ex_paths <- list.files("Adult child ratio/", pattern = "excluded_on")
@@ -78,10 +70,107 @@ child_ratio_ris_dat <-
     child_ratio_incl
   ) 
 
+
+child_ratio_dat_wide <- 
+  left_join(screen_report_dat, child_ratio_ris_dat, by = join_by(eppi_id)) |> 
+  #filter(!is.na(exclude) & !is.na(include)) |> 
+  arrange(final_human_decision)
+
+# Detecting individual screener names
+screeners_var <- 
+  screen_report_dat |> 
+  reframe(
+    name = unique(c_across(exclude1:include))
+  ) |> 
+  pull(name)
+
+screeners <- 
+  unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
+  gsub("\\[.*","", x = _) |> 
+  unique() 
+
+
+filter_list <- list()
+
+for (i in 1:length(screeners)){
+  filter_list[[i]] <- 
+    child_ratio_dat_wide |> 
+    filter(if_any(exclude1:include, ~ str_detect(.x, screeners[i]))) |> 
+    mutate(
+      screener = screeners[i],
+      across(exclude1:include, ~ str_extract(.x, screeners[i]))
+    ) |> 
+    relocate(screener)
+}
+
+single_screen_dat <- 
+  filter_list |> 
+  list_rbind() |> 
+  mutate(
+    exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
+    exclude = if_else(exclude == TRUE, screener, NA_character_),
+    screener_decision = case_when(
+      !is.na(include) ~ 1,
+      !is.na(exclude) ~ 0,
+      !is.na(include) & !is.na(exclude) ~ 2, # Indicating non decisive answer
+      TRUE ~ NA_real_
+    ),
+    conflict = if_else(screener_decision != final_human_decision, 1, 0)
+  ) |> 
+  select(-c(exclude1:exclude3)) |> 
+  relocate(exclude, .before = include) |> 
+  relocate(screener_decision, .before = final_human_decision)
+
+child_ratio_single_perform_dat <- 
+  single_screen_dat |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1),
+    TN = sum(screener_decision == 0 & final_human_decision == 0),
+    FN = sum(screener_decision == 0 & final_human_decision == 1),
+    FP = sum(screener_decision == 1 & final_human_decision == 0),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  mutate(
+    review_authors = "Dalgaard, Bondebjerg et al. (2022)",
+    review = "Adult/child ratio",
+    role = rep(c("Assistant", "Assistant", "Author"), 2),
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(child_ratio_single_perform_dat, "single screener data/child_ratio_single_perform_dat.rds")
+
+
+# Extracting all individual screener scores in wide format
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+child_ratio_dat <- 
+  left_join(child_ratio_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) 
+
+# Calculate assistant vs. main author values
+
+# Test 
+child_ratio_dat |> 
+  filter(!is.na(`Victor Nissen`) & !is.na(`Nina Thorup Dalgaard`)) |> View()
+
+#------------------------------------------------------------------------------
+# Old
+#------------------------------------------------------------------------------
 child_ratio_dat <- 
   left_join(screen_report_dat, child_ratio_ris_dat, by = join_by(eppi_id)) |> 
-  select(-c(author_short, title_report)) |> 
-  relocate(exclude:include, .before = final_human_decision) |> 
+  #select(-c(author_short, title_report)) |> 
+  #relocate(exclude:include, .before = final_human_decision) |> 
   arrange(final_human_decision) |> 
   mutate(
     review_authors = "Dalgaard et al. (2022)",
