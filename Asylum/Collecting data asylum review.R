@@ -10,13 +10,13 @@ html <- read_html("Asylum/Asylum screening level 1 full coding report.html")
 screen_report_dat_raw <- 
   html |> 
   html_element("table") |> 
-  html_table()
+  html_table() |> 
+  filter(str_detect(`I/E/D/S flag`, "(I)|(E)")) 
 
 screen_report_dat_raw |> glimpse()
 
 screen_report_dat <- 
   screen_report_dat_raw |> 
-  filter(str_detect(`I/E/D/S flag`, "(I)|(E)")) |> 
   select(-`I/E/D/S flag`) |> 
   rename(
     eppi_id= ItemId,
@@ -28,13 +28,8 @@ screen_report_dat <-
     include = `Included on title and abstract`
   ) |> 
   mutate(
-    across(exclude1:include, ~ na_if(.x, "")),
-    include = if_else(!is.na(include), "Included", NA_character_),
-    exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
-    exclude = if_else(exclude == TRUE, "Excluded", NA_character_)
+    across(exclude1:include, ~ str_remove_all(.x, "Ã¡ "))
   ) |> 
-  select(-c(exclude1:exclude3)) |> 
-  relocate(exclude, .before = include) |> 
   arrange(eppi_id) 
 
 # Loading included and excluded studies
@@ -63,6 +58,81 @@ asylum_incl <-
   )
 
 asylum_ris_dat <- bind_rows(asylum_excl, asylum_incl) 
+
+
+asylum_dat_wide <- 
+  left_join(screen_report_dat, asylum_ris_dat, by = join_by(eppi_id)) |> 
+  arrange(final_human_decision)
+
+# Detecting individual screener names
+screeners_var <- 
+  screen_report_dat |> 
+  reframe(
+    name = unique(c_across(exclude1:include))
+  ) |> 
+  pull(name)
+
+screeners <- 
+  unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
+  gsub("\\[.*","", x = _) |> 
+  unique() 
+
+
+filter_list <- list()
+
+for (i in 1:length(screeners)){
+  filter_list[[i]] <- 
+    asylum_dat_wide |> 
+    filter(if_any(exclude1:include, ~ str_detect(.x, screeners[i]))) |> 
+    mutate(
+      screener = screeners[i],
+      across(exclude1:include, ~ str_extract(.x, screeners[i]))
+    ) |> 
+    relocate(screener)
+}
+
+single_screen_dat <- 
+  filter_list |> 
+  list_rbind() |> 
+  mutate(
+    exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
+    exclude = if_else(exclude == TRUE, screener, NA_character_),
+    screener_decision = case_when(
+      !is.na(include) ~ 1,
+      !is.na(exclude) ~ 0,
+      !is.na(include) & !is.na(exclude) ~ 2, # Indicating non decisive answer
+      TRUE ~ NA_real_
+    ),
+    conflict = if_else(screener_decision != final_human_decision, 1, 0)
+  ) |> 
+  select(-c(exclude1:exclude3)) |> 
+  relocate(exclude, .before = include) |> 
+  relocate(screener_decision, .before = final_human_decision)
+
+asylum_single_perform_dat <- 
+  single_screen_dat |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1),
+    TN = sum(screener_decision == 0 & final_human_decision == 0),
+    FN = sum(screener_decision == 0 & final_human_decision == 1),
+    FP = sum(screener_decision == 1 & final_human_decision == 0),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  mutate(
+    review_authors = "Filges, Montgomery et al. (2015)",
+    review = "Adult/child ratio",
+    role = rep(c("Assistant", "Assistant", "Author"), 1),
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(asylum_single_perform_dat, "single screener data/asylum_single_perform_dat.rds")
+
+#------------------------------------------------------------------------------
+# Old
+#------------------------------------------------------------------------------
 
 asylum_dat <- 
   left_join(screen_report_dat, asylum_ris_dat, by = join_by(eppi_id)) |> 
