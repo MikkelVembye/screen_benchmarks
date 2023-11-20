@@ -65,8 +65,8 @@ foster_incl <-
 
 foster_ris_dat <- bind_rows(foster_excl, foster_incl) 
 
-forster_dat_test <- 
-  left_join(screen_report_dat, foster_ris_dat,by = join_by(eppi_id)) |> 
+foster_dat_wide <- 
+  left_join(screen_report_dat, foster_ris_dat, by = join_by(eppi_id)) |> 
   #filter(!is.na(exclude) & !is.na(include)) |> 
   mutate(
     across(include:exclude2, ~ str_remove_all(.x, "JÃ¸rgensen"))
@@ -80,7 +80,7 @@ filter_list <- list()
 
 for (i in 1:5){
   filter_list[[i]] <- 
-    forster_dat_test |> 
+    foster_dat_wide |> 
     filter(if_any(include:exclude2, ~ str_detect(.x, screeners[i]))) |> 
     mutate(
       screener = screeners[i],
@@ -107,6 +107,7 @@ single_screen_dat <-
   relocate(screener_decision, .before = final_human_decision) |> 
   filter(!if_all(exclude:include, ~ !is.na(.x))) # Removing all reference where the same screener has voted both in and out 
 
+
 foster_single_perform_dat <- 
   single_screen_dat |> 
   summarise(
@@ -127,6 +128,31 @@ foster_single_perform_dat <-
   relocate(review_authors:role)
 
 saveRDS(foster_single_perform_dat, "single screener data/foster_single_perform_dat.rds")
+
+# Extracting all individual screener scores in wide format
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+foster_dat <- 
+  left_join(foster_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) 
+
+# Calculate assistant vs. main author values
+
+# Test 
+foster_dat |> 
+  filter(!is.na(`Julie Haatuft`) & !is.na(`Trine Filges`)) |> View()
+
+
+
+
 
 
 
