@@ -15,6 +15,8 @@ screen_report_dat_raw <-
 
 screen_report_dat_raw |> glimpse()
 
+rm(html)
+
 screen_report_dat <- 
   screen_report_dat_raw |> 
   select(-`I/E/D/S flag`) |> 
@@ -31,6 +33,8 @@ screen_report_dat <-
     across(exclude1:include, ~ str_remove_all(.x, "Ã¡ "))
   ) |> 
   arrange(eppi_id) 
+
+rm(screen_report_dat_raw)
 
 # Loading included and excluded studies
 ex_paths <- list.files("Asylum/", pattern = "excl")
@@ -59,10 +63,11 @@ asylum_incl <-
 
 asylum_ris_dat <- bind_rows(asylum_excl, asylum_incl) 
 
-
 asylum_dat_wide <- 
   left_join(screen_report_dat, asylum_ris_dat, by = join_by(eppi_id)) |> 
   arrange(final_human_decision)
+
+rm(asylum_excl, asylum_incl)
 
 # Detecting individual screener names
 screeners_var <- 
@@ -109,6 +114,8 @@ single_screen_dat <-
   relocate(exclude, .before = include) |> 
   relocate(screener_decision, .before = final_human_decision)
 
+rm(filter_list)
+
 asylum_single_perform_dat <- 
   single_screen_dat |> 
   summarise(
@@ -129,6 +136,62 @@ asylum_single_perform_dat <-
   relocate(review_authors:role)
 
 saveRDS(asylum_single_perform_dat, "single screener data/asylum_single_perform_dat.rds")
+
+# Extracting all individual screener scores in wide format to exclude training references
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+asylum_dat <- 
+  left_join(asylum_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Therese Friis`:`Trine Filges`)))
+  ) |> 
+  ungroup()
+
+asylum_dat_2screen <- 
+  asylum_dat |> 
+  # Removing train data plus uncertainty decisions
+  filter(n_screeners == 2) |> 
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Therese Friis`:`Trine Filges`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
+
+asylum_single_perform_dat_2screen <- 
+  asylum_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Filges, Montgomery et al. (2015)",
+    review = "Adult/child ratio",
+    role = rep(c("Assistant"), 2),
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(asylum_single_perform_dat_2screen, "single screener data/asylum_single_perform_dat_2screen.rds")
 
 #------------------------------------------------------------------------------
 # Old

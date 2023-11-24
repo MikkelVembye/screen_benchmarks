@@ -24,9 +24,6 @@ screen_report_dat <-
     exclude = `EXCLUDE on title & abstract`, 
     include = `INCLUDE on title & abstract`
   ) |> 
-  mutate(
-    across(exclude:include, ~ na_if(.x, ""))
-  ) |> 
   arrange(eppi_id)
 
 # Loading included and excluded studies
@@ -74,6 +71,80 @@ ids <- dev_train_ris_dat |> pull(eppi_id)
 screen_report_dat_filtered <- 
   screen_report_dat |> 
   filter(eppi_id %in% ids)
+
+
+dev_train_dat_wide <- 
+  left_join(screen_report_dat_filtered, dev_train_ris_dat, by = join_by(eppi_id)) |> 
+  arrange(final_human_decision)
+
+# Detecting individual screener names
+screeners_var <- 
+  screen_report_dat_filtered |> 
+  reframe(
+    name = unique(c_across(exclude:include))
+  ) |> 
+  pull(name)
+
+screeners <- 
+  unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
+  gsub("\\[.*","", x = _) |> 
+  unique()
+
+filter_list <- list()
+
+for (i in 1:length(screeners)){
+  filter_list[[i]] <- 
+    dev_train_dat_wide |> 
+    filter(if_any(exclude:include, ~ str_detect(.x, screeners[i]))) |> 
+    mutate(
+      screener = screeners[i],
+      across(exclude:include, ~ str_extract(.x, screeners[i]))
+    ) |> 
+    relocate(screener)
+}
+
+single_screen_dat <- 
+  filter_list |> 
+  list_rbind() |> 
+  mutate(
+    exclude = if_else(!is.na(exclude), screener, NA_character_),
+    #exclude = if_any(exclude:include, ~ !is.na(.x)),
+    #exclude = if_else(exclude == TRUE, screener, NA_character_),
+    screener_decision = case_when(
+      !is.na(include) ~ 1,
+      !is.na(exclude) ~ 0,
+      !is.na(include) & !is.na(exclude) ~ 2, # Indicating non decisive answer
+      TRUE ~ NA_real_
+    ),
+    conflict = if_else(screener_decision != final_human_decision, 1, 0)
+  ) |> 
+  relocate(exclude, .before = include) |> 
+  relocate(screener_decision, .before = final_human_decision)
+
+dev_train_single_perform_dat <- 
+  single_screen_dat |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1),
+    TN = sum(screener_decision == 0 & final_human_decision == 0),
+    FN = sum(screener_decision == 0 & final_human_decision == 1),
+    FP = sum(screener_decision == 1 & final_human_decision == 0),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  mutate(
+    review_authors = "Filges, Torgerson, et al. (2019)",
+    review = "Development Training",
+    role = rep(c("Author", "Assistant", "Author"), c(1,1,3)),
+  ) |> 
+  relocate(review_authors:role) 
+
+saveRDS(dev_train_single_perform_dat , "single screener data/dev_train_single_perform_dat.rds")
+
+#------------------------------------------------------------------------------
+# Old
+#------------------------------------------------------------------------------
 
 #ids_screen_rep <- screen_report_dat_filtered |> pull(eppi_id)
 #dev_train_ris_dat |> filter(!eppi_id %in% ids_screen_rep) |> View()

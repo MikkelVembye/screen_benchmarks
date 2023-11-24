@@ -6,6 +6,7 @@ library(purrr)
 library(tidyr)
 library(metafor)
 
+
 options(pillar.sigfig = 4) # ensure tibble include 4 digits
 #options(tibble.width = Inf)
 #options(dplyr.print_min = 20)
@@ -19,7 +20,11 @@ path <- list.files(path = "single screener data/", pattern = "_dat")
 dat_raw <- 
   map(path, ~ readRDS(paste0("single screener data/", .x))) |> 
   list_rbind() |> 
+  filter(screener != "Erika Lundqvist") |> 
+  rowwise() |> 
   mutate(
+    #MCC = ((TP*TN) - (FP*FN))/sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN)),
+    #nMCC = (MCC+1)/2,
     N_recall = TP + FN,
     N_spec = TN + FP,
     N_bacc = N_recall  + N_spec,
@@ -27,6 +32,7 @@ dat_raw <-
     prop_spec = TN,
     prop_bacc = TP + TN
   ) |> 
+  ungroup() |> 
   rename(
     perc_recall = recall,
     perc_spec = spec, 
@@ -43,7 +49,13 @@ dat_long <-
   mutate(
     prop = if_else(Category == 'bacc', round(perc*N), prop)
   ) |> 
-  rename(metric = Category)
+  rename(metric = Category) |> 
+  rowwise() |> 
+  mutate(
+    total_ref = sum(c_across(TP:FP))
+  ) |> 
+  filter(total_ref > 500) |> 
+  ungroup()
 
 # Account for Schwarzer et al. critique
 dat_trans <- 
@@ -75,6 +87,7 @@ dat <-
     metric = factor(metric, levels = c("recall", "spec", "bacc")),
     role = factor(role, levels = c("Author", "Assistant"))
   ) 
+  
 
 vline_dat <- 
   dat |> 
@@ -84,24 +97,24 @@ vline_dat <-
   ) 
 
 dat |> 
-#  mutate(
-#    order_var = percent[1],
-#    .by = review_authors
-#  ) |> 
-#  arrange(desc(order_var)) |> 
-#  mutate(
-#    review_authors = factor(review_authors, levels = unique(review_authors))
-#  ) |> 
-  ggplot(aes(x = perc, xmin = ci.lb, xmax = ci.ub, y = review_authors, color = review_authors, alpha = 0.5)) + 
-  geom_pointrange(position = position_dodge2(width = 0.5, padding = 0.5)) +
-  geom_vline(data = vline_dat, aes(xintercept = perc), linetype = "dashed") + 
-  #scale_x_continuous(limits = c(0.4,1), breaks = seq(0L, 1L, 0.1)) +
-  facet_grid(role~metric, scales = "free") +
-  theme_bw() +
-  theme(
-    legend.position="none",
-    axis.title.y = element_text(vjust = +3),
-    axis.title.x = element_text(vjust = -0.75)
-  ) +
-  labs(x = "Percent (%)", y = "Campbell Systematic Review")
+mutate(
+  order_var = perc[1],
+  .by = c(review_authors, role)
+) |> 
+arrange(role, desc(order_var)) |> 
+mutate(
+  review_authors = factor(review_authors, levels = unique(review_authors))
+) |> 
+ggplot(aes(x = perc, y = review_authors, xmin = ci.lb, xmax = ci.ub, color = review_authors, alpha = 0.5)) + 
+geom_pointrange(position = position_dodge2(width = 0.5, padding = 0.5)) +
+geom_vline(data = vline_dat, aes(xintercept = perc), linetype = "dashed") + 
+#scale_x_continuous(limits = c(0.4,1), breaks = seq(0L, 1L, 0.1)) +
+facet_grid(role~metric, scales = "free") +
+theme_bw() +
+theme(
+  legend.position="none",
+  axis.title.y = element_text(vjust = +3),
+  axis.title.x = element_text(vjust = -0.75)
+) +
+labs(x = "Percent (%)", y = "Campbell Systematic Review")
 

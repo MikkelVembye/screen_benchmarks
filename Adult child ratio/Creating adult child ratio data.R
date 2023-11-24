@@ -142,8 +142,7 @@ child_ratio_single_perform_dat <-
 
 saveRDS(child_ratio_single_perform_dat, "single screener data/child_ratio_single_perform_dat.rds")
 
-
-# Extracting all individual screener scores in wide format
+# Extracting all individual screener scores in wide format to remove training data
 
 single_screen_dat_wide <- 
   single_screen_dat |> 
@@ -156,13 +155,47 @@ single_screen_dat_wide <-
 
 child_ratio_dat <- 
   left_join(child_ratio_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
-  relocate(final_human_decision, .after = last_col()) 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Victor Nissen`:`Anja Bondebjerg`)))
+  ) |> 
+  ungroup()
 
-# Calculate assistant vs. main author values
+child_ratio_dat_2screen <- 
+  child_ratio_dat |> 
+  filter(n_screeners == 2) |> 
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Victor Nissen`:`Anja Bondebjerg`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
 
-# Test 
-child_ratio_dat |> 
-  filter(!is.na(`Victor Nissen`) & !is.na(`Nina Thorup Dalgaard`)) |> View()
+child_ratio_single_perform_dat_2screen <- 
+  child_ratio_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Dalgaard, Bondebjerg et al. (2022)",
+    review = "Adult/child ratio",
+    role = rep(c("Author", "Assistant", "Author", "Assistant"), c(1, 3, 1, 1)),
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(child_ratio_single_perform_dat_2screen, "single screener data/child_ratio_single_perform_dat_2screen.rds")
 
 #------------------------------------------------------------------------------
 # Old

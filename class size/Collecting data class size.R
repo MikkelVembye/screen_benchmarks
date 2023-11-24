@@ -146,6 +146,65 @@ cl_size_single_perform_dat <-
 
 saveRDS(cl_size_single_perform_dat, "single screener data/cl_size_single_perform_dat.rds")
 
+#----------------------------------------------------------------------------------------
+# Extracting all individual screener scores in wide format to exclude training references
+#----------------------------------------------------------------------------------------
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+cl_size_dat <- 
+  left_join(cl_size_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Mia Thuelund Hansen`:`Trine Filges`)))
+  ) |> 
+  ungroup()
+
+cl_size_dat_2screen <- 
+  cl_size_dat |> 
+  # Removing train data plus uncertainty decisions
+  filter(n_screeners %in% c(2, 3)) |> # Three individual screeners was used in this review
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Mia Thuelund Hansen`:`Trine Filges`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
+
+cl_size_single_perform_dat_2screen <- 
+  cl_size_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Filges, Sonne-Schmidt, et al. (2018)",
+    review = "Class size",
+    role = rep(c("Assistant", "Author"), c(5,1)),
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(cl_size_single_perform_dat_2screen, "single screener data/cl_size_single_perform_dat_2screen.rds")
+
+
 #------------------------------------------------------------------------------
 # Old
 #------------------------------------------------------------------------------

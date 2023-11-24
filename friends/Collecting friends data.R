@@ -10,7 +10,8 @@ html <- read_html("friends/FRIENDS Title & Abstract full coding report.html")
 screen_report_dat_raw <- 
   html |> 
   html_element("table") |> 
-  html_table()
+  html_table() |> 
+  filter(str_detect(`I/E/D/S flag`, "(I)|(E)"))
 
 
 screen_report_dat <- 
@@ -23,11 +24,7 @@ screen_report_dat <-
     exclude = EXCLUDE, 
     include = `INCLUDE on T/A`
   ) |> 
-  mutate(
-    across(exclude:include, ~ na_if(.x, ""))
-  ) |> 
-  arrange(eppi_id) |> 
-  filter(eppi_id != "FullPath:") # removing first row
+  arrange(eppi_id)
 
 
 # Loading included and excluded studies
@@ -47,7 +44,7 @@ friends_incl <- revtools::read_bibliography("friends/friends_incl.ris") |>
     final_human_decision = 1
   )
 
-friends_raw_dat <- 
+friends_ris_dat <- 
   bind_rows(filter(friends_excl, eppi_id != "91822596"), friends_incl)  # Removing one reference that both appears among in and excluded references
   
 
@@ -61,6 +58,81 @@ gray_ids <-
   select(ID) |> 
   pull(ID) |> 
   as.character()
+
+friends_dat_wide <- 
+  left_join(screen_report_dat, friends_ris_dat, by = join_by(eppi_id)) |> 
+  filter(!eppi_id %in% gray_ids) |> 
+  #filter(!is.na(abstract)) |> 
+  arrange(final_human_decision) 
+
+# Detecting individual screener names
+screeners_var <- 
+  screen_report_dat |> 
+  reframe(
+    name = unique(c_across(exclude:include))
+  ) |> 
+  pull(name)
+
+screeners <- 
+  unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
+  gsub("\\[.*","", x = _) |> 
+  unique() 
+
+screeners <- screeners[1:2]
+
+filter_list <- list()
+
+for (i in 1:length(screeners)){
+  filter_list[[i]] <- 
+    friends_dat_wide |> 
+    filter(if_any(exclude:include, ~ str_detect(.x, screeners[i]))) |> 
+    mutate(
+      screener = screeners[i],
+      across(exclude:include, ~ str_extract(.x, screeners[i]))
+    ) |> 
+    relocate(screener)
+}
+
+single_screen_dat <- 
+  filter_list |> 
+  list_rbind() |> 
+  mutate(
+    exclude = if_else(!is.na(exclude), screener, NA_character_),
+    screener_decision = case_when(
+      !is.na(include) ~ 1,
+      !is.na(exclude) ~ 0,
+      !is.na(include) & !is.na(exclude) ~ 2, # Indicating non decisive answer
+      TRUE ~ NA_real_
+    ),
+    conflict = if_else(screener_decision != final_human_decision, 1, 0)
+  ) |> 
+  relocate(exclude, .before = include) |> 
+  relocate(screener_decision, .before = final_human_decision)
+
+friends_single_perform_dat <- 
+  single_screen_dat |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1),
+    TN = sum(screener_decision == 0 & final_human_decision == 0),
+    FN = sum(screener_decision == 0 & final_human_decision == 1),
+    FP = sum(screener_decision == 1 & final_human_decision == 0),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  mutate(
+    review_authors = "Filges et al. (forthcoming)",
+    review = "FRIENDS",
+    role = c("Author", "Assistant"),
+  ) |> 
+  relocate(review_authors:role) 
+
+saveRDS(friends_single_perform_dat, "single screener data/friends_single_perform_dat.rds")
+
+#------------------------------------------------------------------------------
+# Old
+#------------------------------------------------------------------------------
 
 friends_dat <- 
   left_join(screen_report_dat, friends_raw_dat, by = join_by(eppi_id)) |> 
