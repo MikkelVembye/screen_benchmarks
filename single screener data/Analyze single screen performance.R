@@ -93,7 +93,7 @@ dat <-
 vline_dat <- 
   dat |> 
   summarise(
-    perc = mean(perc),
+    perc = weighted.mean(perc, N),
     .by = c(role, metric)
   ) 
 
