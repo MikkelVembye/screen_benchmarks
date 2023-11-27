@@ -1,0 +1,228 @@
+# Creating data for sports review
+library(tidyverse)
+library(rvest)
+library(revtools)
+library(purrr)
+library(openxlsx2)
+library(stringr)
+library(readr)
+
+
+html <- read_html("Service learning/Service learning screen on title & abstract full coding report.html")
+
+screen_report_dat_raw <- 
+  html |> 
+  html_element("table") |> 
+  html_table() |> 
+  filter(str_detect(`I/E/D/S flag`, "(I)|(E)")) |> 
+  filter(!str_detect(`I/E/D/S flag`, "(S)")) # Strange mistake here
+
+screen_report_dat_raw |> glimpse()
+
+screen_report_dat <- 
+  screen_report_dat_raw |> 
+  select(-`I/E/D/S flag`) |> 
+  rename(
+    eppi_id= ItemId,
+    author_short = ShortTitle, 
+    title_report = Title, 
+    include = Include,
+    exclude1 = Exclude, 
+    exclude2 = Review,
+  ) |> 
+  arrange(eppi_id)
+
+#rm(screen_report_dat_raw)
+
+# Loading included and excluded studies
+ex_paths <- list.files("Service learning/", pattern = "excl")
+
+service_excl <- 
+  map(ex_paths, ~ {
+    revtools::read_bibliography(paste0("Service learning/", .x)) |> 
+      suppressWarnings() |> 
+      as_tibble() |>
+      select(author, eppi_id, title, abstract) |> # Using only relevant variables
+      mutate(
+        final_human_decision = 0
+      )
+  }
+  ) |> 
+  list_rbind()
+
+service_review <- revtools::read_bibliography("Service learning/reviewTA.ris") |> 
+  suppressWarnings() |> 
+  as_tibble() |>
+  select(author, eppi_id, title, abstract) |>
+  mutate(
+    final_human_decision = 2
+  )
+
+service_incl <- revtools::read_bibliography("Service learning/includeTA.ris") |> 
+  suppressWarnings() |> 
+  as_tibble() |>
+  select(author, eppi_id, title, abstract) |>
+  mutate(
+    final_human_decision = 1
+  )
+
+service_ris_dat <- bind_rows(service_excl, service_review, service_incl) 
+
+double_ids <- 
+  service_ris_dat |> 
+  summarise(n=n(), .by = eppi_id) |> 
+  filter(n>1) |> 
+  pull(eppi_id)
+
+service_ris_dat <- bind_rows(filter(service_excl, !eppi_id %in% double_ids), service_review, service_incl) 
+
+#rm(service_excl)
+#rm(service_review)
+#rm(service_incl)
+
+# Screen report id 
+ids <- service_ris_dat |> pull(eppi_id)
+
+# Missing reference (single screened)
+screen_report_dat |> 
+  filter(!eppi_id %in% ids)
+
+screen_report_dat_filtered <- 
+  screen_report_dat |> 
+  filter(eppi_id %in% ids) 
+  
+service_dat_wide <- 
+  left_join(screen_report_dat_filtered, service_ris_dat, by = join_by(eppi_id)) |> 
+  arrange(final_human_decision) 
+
+
+# Detecting individual screeners
+screeners_var <- 
+  screen_report_dat_filtered |> 
+  reframe(
+    name = unique(c_across(include:exclude2))
+  ) |> 
+  pull(name)
+
+screeners <- 
+  unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
+  gsub("\\[.*","", x = _) |> 
+  unique() 
+
+screeners <- screeners[c(1:4, 6:7, 9)]
+
+filter_list <- list()
+
+for (i in 1:length(screeners)){
+  filter_list[[i]] <- 
+    service_dat_wide |> 
+    filter(if_any(include:exclude2, ~ str_detect(.x, screeners[i]))) |> 
+    mutate(
+      screener = screeners[i],
+      across(include:exclude2, ~ str_extract(.x, screeners[i]))
+    ) |> 
+    relocate(screener)
+}
+
+single_screen_dat <- 
+  filter_list |> 
+  list_rbind() |> 
+  mutate(
+    #exclude = if_else(!is.na(exclude), screener, NA_character_),
+    exclude = if_any(include:exclude2, ~ !is.na(.x)),
+    exclude = if_else(exclude == TRUE, screener, NA_character_),
+    screener_decision = case_when(
+      !is.na(include) ~ 1,
+      !is.na(exclude) ~ 0,
+      !is.na(include) & !is.na(exclude) ~ 2, # Indicating non decisive answer
+      TRUE ~ NA_real_
+    ),
+    conflict = if_else(screener_decision != final_human_decision, 1, 0)
+  ) |> 
+  relocate(exclude, .before = include) |> 
+  relocate(screener_decision, .before = final_human_decision)
+
+sum(single_screen_dat$screener_decision == 2)
+
+# All screenings including training sessions
+service_single_perform_dat <- 
+  single_screen_dat |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1),
+    TN = sum(screener_decision == 0 & final_human_decision == 0),
+    FN = sum(screener_decision == 0 & final_human_decision == 1),
+    FP = sum(screener_decision == 1 & final_human_decision == 0),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  mutate(
+    review_authors = "Filges, Dietrichson, et al. (2022)",
+    review = "Service Learning",
+    role = rep(c("Assistant", "Author"), c(4,3))
+  ) |> 
+  relocate(review_authors:role) 
+
+saveRDS(service_single_perform_dat, "single screener data/All screenings/service_single_perform_dat.rds")
+
+#----------------------------------------------------------------------------------------
+# Extracting all individual screener scores in wide format to exclude training references
+#----------------------------------------------------------------------------------------
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+service_dat <- 
+  left_join(service_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Line Marie Toft Dyhr`:`Anja Bondebjerg`)))
+  ) |> 
+  ungroup()
+
+n_refs <- service_dat |> filter(n_screeners == 2) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/service_n_refs.rds")
+
+service_dat_2screen <- 
+  service_dat |> 
+  filter(n_screeners == 2) |>
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Line Marie Toft Dyhr`:`Anja Bondebjerg`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
+
+service_single_perform_dat_2screen <- 
+  service_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Filges, Dietrichson, et al. (2022)",
+    review = "Service Learning",
+    role = rep(c("Author", "Assistant", "Author"), c(1, 4, 1))
+  ) |> 
+  relocate(review_authors:role) |> 
+  filter(screener != "Anja Bondebjerg")
+
+saveRDS(service_single_perform_dat_2screen, "single screener data/service_single_perform_dat_2screen.rds")
