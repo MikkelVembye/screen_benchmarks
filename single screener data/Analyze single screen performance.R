@@ -5,6 +5,7 @@ library(ggplot2)
 library(purrr)
 library(tidyr)
 library(metafor)
+library(tidytext)
 
 
 options(pillar.sigfig = 4) # ensure tibble include 4 digits
@@ -54,7 +55,7 @@ dat_long <-
   mutate(
     total_ref = sum(c_across(TP:FP))
   ) |> 
-  filter(total_ref > 500) |> 
+  #filter(total_ref > 500) |> 
   ungroup()
 
 # Account for Schwarzer et al. critique
@@ -96,6 +97,7 @@ vline_dat <-
     .by = c(role, metric)
   ) 
 
+# Recalculate order variable via metafor
 dat |> 
 mutate(
   order_var = perc[1],
@@ -105,10 +107,11 @@ arrange(role, desc(order_var)) |>
 mutate(
   review_authors = factor(review_authors, levels = unique(review_authors))
 ) |> 
-ggplot(aes(x = perc, y = review_authors, xmin = ci.lb, xmax = ci.ub, color = review_authors, alpha = 0.5)) + 
+ggplot(aes(x = perc, xmin = ci.lb, xmax = ci.ub, reorder_within(review_authors, desc(order_var), role), color = review_authors, alpha = 0.5)) + 
 geom_pointrange(position = position_dodge2(width = 0.5, padding = 0.5)) +
 geom_vline(data = vline_dat, aes(xintercept = perc), linetype = "dashed") + 
 #scale_x_continuous(limits = c(0.4,1), breaks = seq(0L, 1L, 0.1)) +
+scale_y_reordered() +
 facet_grid(role~metric, scales = "free") +
 theme_bw() +
 theme(

@@ -14,6 +14,7 @@ screen_report_dat_raw <-
   html_table() |> 
   filter(str_detect(`I/E/D/S flag`, "(I)|(E)"))
 
+
 screen_report_dat <- 
   screen_report_dat_raw |> 
   select(-`I/E/D/S flag`) |> 
@@ -24,7 +25,12 @@ screen_report_dat <-
     exclude = EXCLUDE, 
     include = `INCLUDE on title & abstract`
   ) |> 
+  mutate(
+    across(exclude:include, ~ str_replace_all(.x, "amanda weber", "Amanda Weber"))
+  ) |> 
   arrange(eppi_id)
+
+rm(screen_report_dat_raw)
 
 # Loading included and excluded studies
 deploy_excl <- revtools::read_bibliography("deployment/deploy_excl.ris") |> 
@@ -61,8 +67,6 @@ screeners <-
   unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
   gsub("\\[.*","", x = _) |> 
   unique()
-
-screeners <- screeners[c(2:4)]
 
 filter_list <- list()
 
@@ -116,6 +120,64 @@ deploy_single_perform_dat <-
   
 
 saveRDS(deploy_single_perform_dat, "single screener data/deploy_single_perform_dat.rds")
+
+#----------------------------------------------------------------------------------------
+# Extracting all individual screener scores in wide format to exclude training references
+#----------------------------------------------------------------------------------------
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+deploy_dat <- 
+  left_join(deploy_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Ida Rasmussen`:`Trine Filges`)))
+  ) |> 
+  ungroup()
+
+deploy_dat_2screen <- 
+  deploy_dat |> 
+  filter(n_screeners == 2) |>
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Ida Rasmussen`:`Trine Filges`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
+
+deploy_single_perform_dat_2screen <- 
+  deploy_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Bøg, Filges, et al. (2018)",
+    review = "Deployment",
+    role = "Assistant",
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(deploy_single_perform_dat_2screen, "single screener data/deploy_single_perform_dat_2screen.rds")
+
 
 
 #------------------------------------------------------------------------------

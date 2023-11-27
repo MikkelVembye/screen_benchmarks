@@ -65,6 +65,9 @@ friends_dat_wide <-
   #filter(!is.na(abstract)) |> 
   arrange(final_human_decision) 
 
+n_refs <- friends_dat_wide |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/friends_n_refs.rds")
+
 # Detecting individual screener names
 screeners_var <- 
   screen_report_dat |> 
@@ -109,6 +112,7 @@ single_screen_dat <-
   relocate(exclude, .before = include) |> 
   relocate(screener_decision, .before = final_human_decision)
 
+
 friends_single_perform_dat <- 
   single_screen_dat |> 
   summarise(
@@ -128,7 +132,8 @@ friends_single_perform_dat <-
   ) |> 
   relocate(review_authors:role) 
 
-saveRDS(friends_single_perform_dat, "single screener data/friends_single_perform_dat.rds")
+saveRDS(friends_single_perform_dat, "single screener data/friends_single_perform_dat_2screen.rds")
+
 
 #------------------------------------------------------------------------------
 # Old

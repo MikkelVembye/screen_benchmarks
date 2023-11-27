@@ -136,11 +136,68 @@ dev_train_single_perform_dat <-
   mutate(
     review_authors = "Filges, Torgerson, et al. (2019)",
     review = "Development Training",
-    role = rep(c("Author", "Assistant", "Author"), c(1,1,3)),
+    role = rep(c("Author", "Assistant", "Author"), c(1,1,3))
   ) |> 
   relocate(review_authors:role) 
 
 saveRDS(dev_train_single_perform_dat , "single screener data/dev_train_single_perform_dat.rds")
+
+#----------------------------------------------------------------------------------------
+# Extracting all individual screener scores in wide format to exclude training references
+#----------------------------------------------------------------------------------------
+
+single_screen_dat_wide <- 
+  single_screen_dat |> 
+  pivot_wider(
+    id_cols = eppi_id,
+    id_expand = TRUE,
+    values_from = screener_decision,
+    names_from = screener,
+  )
+
+dev_train_dat <- 
+  left_join(dev_train_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Louise Gascoine`:`Trine Filges`)))
+  ) |> 
+  ungroup()
+
+dev_train_dat_2screen <- 
+  dev_train_dat |> 
+  filter(n_screeners == 2) |>
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Louise Gascoine`:`Trine Filges`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
+
+dev_train_single_perform_dat_2screen <- 
+  dev_train_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Filges, Torgerson, et al. (2019)",
+    review = "Development Training",
+    role = rep(c("Author", "Assistant", "Author"), c(2,1,2))
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(dev_train_single_perform_dat_2screen, "single screener data/dev_train_single_perform_dat_2screen.rds")
 
 #------------------------------------------------------------------------------
 # Old

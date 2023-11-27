@@ -131,6 +131,10 @@ saveRDS(foster_single_perform_dat, "single screener data/foster_single_perform_d
 
 # Extracting all individual screener scores in wide format
 
+#----------------------------------------------------------------------------------------
+# Extracting all individual screener scores in wide format to exclude training references
+#----------------------------------------------------------------------------------------
+
 single_screen_dat_wide <- 
   single_screen_dat |> 
   pivot_wider(
@@ -142,16 +146,52 @@ single_screen_dat_wide <-
 
 foster_dat <- 
   left_join(foster_dat_wide, single_screen_dat_wide, by = join_by(eppi_id)) |> 
-  relocate(final_human_decision, .after = last_col()) 
+  relocate(final_human_decision, .after = last_col()) |> 
+  rowwise() |> 
+  mutate(
+    n_screeners = sum(!is.na(c_across(`Anton Dam`:`Trine Filges`)))
+  ) |> 
+  ungroup()
 
-# Calculate assistant vs. main author values
-
-# Test 
-foster_dat |> 
-  filter(!is.na(`Julie Haatuft`) & !is.na(`Trine Filges`)) |> View()
+# References screened
+n_refs <- foster_dat |> filter(n_screeners == 2) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/foster_n_refs.rds")
 
 
+foster_dat_2screen <- 
+  foster_dat |> 
+  filter(n_screeners == 2) |>
+  select(-n_screeners) |> 
+  pivot_longer(
+    cols = `Anton Dam`:`Trine Filges`,
+    names_to = "screener",
+    values_to = "screener_decision"
+  ) |> 
+  filter(!is.na(screener_decision)) |> 
+  arrange(screener, final_human_decision) |>
+  relocate(screener:screener_decision, .before = final_human_decision)
 
+foster_single_perform_dat_2screen <- 
+  foster_dat_2screen |> 
+  summarise(
+    TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
+    TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),
+    FN = sum(screener_decision == 0 & final_human_decision == 1, na.rm = TRUE),
+    FP = sum(screener_decision == 1 & final_human_decision == 0, na.rm = TRUE),
+    recall = TP / (TP + FN),
+    spec = TN / (TN + FP),
+    bacc = (recall + spec) / 2,
+    .by = screener
+  ) |> 
+  ungroup() |> 
+  mutate(
+    review_authors = "Dalgaard, Filges et al. (2022)",
+    review = "Parenting interventions",
+    role = c("Assistant", "Assistant", "Author", "Assistant", "Author")
+  ) |> 
+  relocate(review_authors:role)
+
+saveRDS(foster_single_perform_dat_2screen, "single screener data/foster_single_perform_dat_2screen.rds")
 
 
 
