@@ -85,7 +85,13 @@ dat <-
   summary(dat_trans, transf=transf.iarcsin) |> 
   as_tibble() |> 
   mutate(
-    metric = factor(metric, levels = c("recall", "spec", "bacc")),
+    metric = case_when(
+      metric == "recall" ~ "Recall",
+      metric == "spec" ~ "Specificity",
+      metric == "bacc" ~ "Balanced Accuracy",
+      TRUE ~ NA_character_
+      ),
+    metric = factor(metric, levels = c("Recall", "Specificity", "Balanced Accuracy")),
     role = factor(role, levels = c("Author", "Assistant"))
   ) 
   
