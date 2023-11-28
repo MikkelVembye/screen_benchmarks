@@ -104,10 +104,11 @@ vline_dat <-
   ) 
 
 # Recalculate order variable via metafor
+png("single screener data/Figures/facet_grid fig.png", height = 7, width = 12, unit = "in", res = 600)
 dat |> 
 mutate(
-  order_var = perc[1],
-  .by = c(review_authors, role)
+  order_var = weighted.mean(perc, N),
+  .by = c(review_authors, role, metric)
 ) |> 
 arrange(role, desc(order_var)) |> 
 mutate(
@@ -126,4 +127,4 @@ theme(
   axis.title.x = element_text(vjust = -0.75)
 ) +
 labs(x = "Percent (%)", y = "Campbell Systematic Review")
-
+dev.off()
