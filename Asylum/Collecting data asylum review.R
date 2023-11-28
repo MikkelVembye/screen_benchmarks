@@ -100,8 +100,9 @@ single_screen_dat <-
   filter_list |> 
   list_rbind() |> 
   mutate(
-    exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
-    exclude = if_else(exclude == TRUE, screener, NA_character_),
+    exclude = if_else(!is.na(exclude), screener, NA_character_),
+    #exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
+    #exclude = if_else(exclude == TRUE, screener, NA_character_),
     screener_decision = case_when(
       !is.na(include) ~ 1,
       !is.na(exclude) ~ 0,
@@ -110,7 +111,6 @@ single_screen_dat <-
     ),
     conflict = if_else(screener_decision != final_human_decision, 1, 0)
   ) |> 
-  select(-c(exclude1:exclude3)) |> 
   relocate(exclude, .before = include) |> 
   relocate(screener_decision, .before = final_human_decision)
 
