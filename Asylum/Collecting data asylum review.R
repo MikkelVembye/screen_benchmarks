@@ -100,9 +100,9 @@ single_screen_dat <-
   filter_list |> 
   list_rbind() |> 
   mutate(
-    exclude = if_else(!is.na(exclude), screener, NA_character_),
-    #exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
-    #exclude = if_else(exclude == TRUE, screener, NA_character_),
+    #exclude = if_else(!is.na(exclude), screener, NA_character_),
+    exclude = if_any(exclude1:exclude3, ~ !is.na(.x)),
+    exclude = if_else(exclude == TRUE, screener, NA_character_),
     screener_decision = case_when(
       !is.na(include) ~ 1,
       !is.na(exclude) ~ 0,
@@ -111,10 +111,15 @@ single_screen_dat <-
     ),
     conflict = if_else(screener_decision != final_human_decision, 1, 0)
   ) |> 
+  select(-c(exclude1:exclude3)) |> 
   relocate(exclude, .before = include) |> 
   relocate(screener_decision, .before = final_human_decision)
 
 rm(filter_list)
+
+#Check 
+sum(single_screen_dat$screener_decision == 2)
+
 
 asylum_single_perform_dat <- 
   single_screen_dat |> 
@@ -130,7 +135,7 @@ asylum_single_perform_dat <-
   ) |> 
   mutate(
     review_authors = "Filges, Montgomery et al. (2015)",
-    review = "Adult/child ratio",
+    review = "Asylum",
     role = rep(c("Assistant", "Assistant", "Author"), 1),
   ) |> 
   relocate(review_authors:role)
@@ -156,6 +161,22 @@ asylum_dat <-
     n_screeners = sum(!is.na(c_across(`Therese Friis`:`Trine Filges`)))
   ) |> 
   ungroup()
+
+n_refs <- asylum_dat |> filter(n_screeners == 2) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/asylum_n_refs.rds")
+
+cor_dat <- 
+  asylum_dat |> 
+  filter(n_screeners == 2) |> 
+  select(`Therese Friis`:`Malan Dunga`) |> 
+  rename(screener1 = `Therese Friis`, screener2 = `Malan Dunga`) |> 
+  mutate(
+    across(everything(), ~ as.integer(.x))
+  )
+
+cor_mat <- cor(cor_dat) |> as.data.frame()
+saveRDS(cor_mat, "single screener data/Between screener correlation/asylum_cor_mat.rds")  
+
 
 asylum_dat_2screen <- 
   asylum_dat |> 
@@ -186,7 +207,7 @@ asylum_single_perform_dat_2screen <-
   ungroup() |> 
   mutate(
     review_authors = "Filges, Montgomery et al. (2015)",
-    review = "Adult/child ratio",
+    review = "Asylum",
     role = rep(c("Assistant"), 2),
   ) |> 
   relocate(review_authors:role)
@@ -197,29 +218,30 @@ saveRDS(asylum_single_perform_dat_2screen, "single screener data/asylum_single_p
 # Old
 #------------------------------------------------------------------------------
 
-asylum_dat <- 
-  left_join(screen_report_dat, asylum_ris_dat, by = join_by(eppi_id)) |> 
-  select(-c(author_short, title_report)) |> 
-  relocate(exclude:include, .before = final_human_decision) |> 
-  arrange(final_human_decision) |> 
-  mutate(
-    review_authors = "Filges, Montgomery et al. (2015)",
-    review = "Asylum",
-    studyid = 1:n(),
-    abstract = str_remove_all(abstract, "\\<bold\\>"),
-    conflict = if_else(!is.na(exclude) & !is.na(include), 1, 0)
-  ) |> 
-  relocate(studyid, .after = eppi_id) |> 
-  relocate(author) |> 
-  relocate(review_authors:review)
-
-# Level of conflicts
-asylum_dat |> 
-  summarise(
-    number_of_references = n(),
-    number_of_conflicts = sum(conflict == 1), 
-    percent_conflict = mean(conflict == 1),
-    .by = final_human_decision
-  )
-
-saveRDS(asylum_dat, file = "all data sets/asylum_dat.rds")
+#asylum_dat <- 
+#  left_join(screen_report_dat, asylum_ris_dat, by = join_by(eppi_id)) |> 
+#  select(-c(author_short, title_report)) |> 
+#  relocate(exclude:include, .before = final_human_decision) |> 
+#  arrange(final_human_decision) |> 
+#  mutate(
+#    review_authors = "Filges, Montgomery et al. (2015)",
+#    review = "Asylum",
+#    studyid = 1:n(),
+#    abstract = str_remove_all(abstract, "\\<bold\\>"),
+#    conflict = if_else(!is.na(exclude) & !is.na(include), 1, 0)
+#  ) |> 
+#  relocate(studyid, .after = eppi_id) |> 
+#  relocate(author) |> 
+#  relocate(review_authors:review)
+#
+## Level of conflicts
+#asylum_dat |> 
+#  summarise(
+#    number_of_references = n(),
+#    number_of_conflicts = sum(conflict == 1), 
+#    percent_conflict = mean(conflict == 1),
+#    .by = final_human_decision
+#  )
+#
+#saveRDS(asylum_dat, file = "all data sets/asylum_dat.rds")
+#
