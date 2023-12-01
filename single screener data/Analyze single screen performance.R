@@ -6,6 +6,7 @@ library(purrr)
 library(tidyr)
 library(metafor)
 library(tidytext)
+library(stringr)
 
 
 options(pillar.sigfig = 4) # ensure tibble include 4 digits
@@ -81,38 +82,134 @@ dat_trans_prop <-
   escalc(measure="PAS", xi=n, ni=N, data=dat_long_prop) |> 
   mutate(
     esid = 1:n()
-  )
+  ) 
 
 dat_trans_cor <- 
   dat_long_cor |> 
   rowwise() |> 
   mutate(
-    z = 0.5 * log((1+val)/(1-val)),
-    z_vi = 1/(N-3)
+    yi = 0.5 * log((1+val)/(1-val)),
+    vi = 1/(N-3)
   ) |> 
   ungroup() |> 
   mutate(
     esid = 1:n()
   )
 
+dat_trans <- 
+  bind_rows(dat_trans_prop, dat_trans_cor) |> 
+  mutate(
+    metric = factor(metric, levels = c("recall", "spec", "bacc", "nMCC"))
+  ) |> 
+  arrange(review_authors, role, screener, metric) 
 
 # Build analysis function
 
 # https://www.metafor-project.org/doku.php/analyses:miller1978?s[]=proportion
-res <- 
-  metafor::rma.mv(
-  yi,
-  vi,
-  random = ~ 1 | review_authors/esid,
-  data = filter(dat_trans_prop, metric == "recall" & role == "Assistant")
-) |> 
-  metafor::robust(
-    cluster = review_authors, 
-    clubSandwich = TRUE
+
+maSCEp <- function(filter, scale, data = dat_trans, rho = 0.7){
+  
+  dat <- 
+    data |> 
+    dplyr::filter(metric == filter)
+  
+  V <- metafor::vcalc(vi, cluster = review_authors, subgroup = role, obs = esid, rho = rho, data = dat)
+  V
+  
+  sce <- 
+    metafor::rma.mv(
+      yi ~ 0 + role,
+      V,
+      random = list(~ role | review_authors, ~ role | esid), 
+      struct = c("DIAG", "DIAG"),
+      data = dat,
+      sparse = TRUE
+    ) |> 
+    metafor::robust(
+      cluster = review_authors, 
+      clubSandwich = TRUE
+    )
+  
+  wald_test <- 
+    clubSandwich::Wald_test(
+      sce, 
+      constraints = clubSandwich::constrain_equal(1:2), 
+      vcov = "CR2"
+    ) |> 
+    dplyr::mutate(
+      metric = filter,
+      p_val = as.numeric(p_val)
+    ) |> 
+    dplyr::relocate(metric)
+  
+  
+  if (scale == "prop"){
+    
+   model_res <- tibble(
+     metric = filter,
+     role = str_remove_all(rownames(sce$b), "role"),
+     val = transf.iarcsin(sce$beta),
+     ci.lb = transf.iarcsin(sce$ci.lb),
+     ci.ub = transf.iarcsin(sce$ci.ub),
+     tau = sqrt(sce$tau2),
+     omega = sqrt(sce$gamma2)
+   ) 
+    
+  }
+  
+  if (scale == "cor"){
+  
+  b <- as.numeric(sce$beta)  
+  cil <- as.numeric(sce$ci.lb) 
+  ciu <- as.numeric(sce$ci.ub)  
+  
+  model_res <- tibble(
+    metric = filter,
+    role = str_remove_all(rownames(sce$b), "role"),
+    val = (exp(2*b)-1)/(exp(2*b) + 1),
+    ci.lb = (exp(2*cil)-1)/(exp(2*cil) + 1),
+    ci.ub = (exp(2*ciu)-1)/(exp(2*ciu) + 1),
+    tau = sqrt(sce$tau2),
+    omega = sqrt(sce$gamma2)
+  ) 
+    
+  }
+  
+  res <- list(model_res = model_res, wald_test = wald_test)
+  res
+  
+}
+
+params <- 
+  tibble(
+    filter = unique(dat_trans$metric),
+    scale = rep(c("prop", "cor"), c(3, 1))
   )
 
-pred <- predict(res, transf=transf.iarcsin)
-pred
+all_res_list <- pmap(.l = params, .f = maSCEp) 
+
+model_res_dat <- 
+  map(1:4, ~ all_res_list[[.x]][[1]]) |> 
+  list_rbind() |> 
+  mutate(
+    metric = case_when(
+      metric == "recall" ~ "Recall",
+      metric == "spec" ~ "Specificity",
+      metric == "bacc" ~ "Balanced Accuracy",
+      TRUE ~ metric
+    ),
+    metric = factor(metric, levels = c("Recall", "Specificity", "Balanced Accuracy", "nMCC")),
+    role = if_else(role == "Assistant", "Assistant / Non-Content Expert", role),
+    role = factor(role, levels = c("Assistant / Non-Content Expert", "Author"))
+  ) |> 
+  arrange(role)
+  
+
+# For paper only 
+wald_res_dat <- 
+  map(1:4, ~ all_res_list[[.x]][[2]]) |> 
+  list_rbind()
+
 
 # Transform back measures
 dat_prop <- 
@@ -134,14 +231,14 @@ dat_cor <-
   dat_trans_cor |> 
   rowwise() |> 
   mutate(
-    z_cil = z - qnorm(0.975) * sqrt(z_vi),
-    z_ciu = z + qnorm(0.975) * sqrt(z_vi),
-    yi = (exp(2*z)-1)/(exp(2*z) + 1),
+    z_cil = yi - qnorm(0.975) * sqrt(vi),
+    z_ciu = yi + qnorm(0.975) * sqrt(vi),
+    yi = (exp(2*yi)-1)/(exp(2*yi) + 1),
     ci.lb = (exp(2*z_cil)-1)/(exp(2*z_cil) + 1),
     ci.ub =(exp(2*z_ciu)-1)/(exp(2*z_ciu) + 1)
   ) |> 
   ungroup() |> 
-  select(!contains("z")) |> 
+  select(!contains("z"), -vi) |> 
   relocate(esid, .after = last_col())
 
 dat <- 
@@ -153,30 +250,78 @@ dat <-
   ) |> 
   arrange(review_authors, screener, metric)
 
+# Prepare polygons
+#r_diam_x1 <- r_diam_y1 <- 
+#  dat |> 
+#  filter(role == "Assistant / Non-Content Expert" & metric == "Recall") |> 
+#  nrow() - 2
+#
+#r_diam_x2 <- r_diam_y2 <- 
+#  dat |> 
+#  filter(role == "Author" & metric == "Recall") |> 
+#  nrow() - 2
+#
+#sum.x1 <- map(1:4, ~ 
+#  c(
+#    rep(NA, r_diam_x1),
+#    model_res_dat$ci.lb[.x], 
+#    model_res_dat$val[.x], 
+#    model_res_dat$ci.ub[.x], 
+#    model_res_dat$val[.x]
+#    
+#  )
+#  ) |>
+#  list_c()
+#  
+#sum.x2 <- map(5:8, ~ 
+#  c(
+#    rep(NA, r_diam_x2),
+#    model_res_dat$ci.lb[.x], 
+#    model_res_dat$val[.x], 
+#    model_res_dat$ci.ub[.x], 
+#    model_res_dat$val[.x]
+#    
+#    )
+#  ) |>
+#  list_c()
+#
+#sum.y1 <- rep(c(rep(NA, r_diam_y1), 1, 0.7, 1, 1.3), 4)
+#sum.y2 <- rep(c(rep(NA, r_diam_y2), 1, 0.7, 1, 1.3), 4)
+
+
 vline_dat <- 
-  dat |> 
-  summarise(
-    val = weighted.mean(val, N),
-    .by = c(role, metric)
-  ) 
+  model_res_dat  |> 
+  select(role, metric, val) |> 
+  arrange(role)
 
 # Recalculate order variable via metafor
-png("single screener data/Figures/facet_grid fig.png", height = 7, width = 12, unit = "in", res = 600)
+#png("single screener data/Figures/facet_grid fig.png", height = 7, width = 12, unit = "in", res = 600)
 dat |> 
 mutate(
   order_var = weighted.mean(val, N),
   .by = c(review_authors, role, metric)
 ) |> 
+#group_by(role, metric) |> 
+#group_modify(~ add_row(.x, order_var = 1)) |> 
+#group_modify(~ add_row(.x, review_authors = "Summary (SCE+)")) |> 
+#mutate(
+#  
+#  review_authors = replace_na(review_authors, ""),
+#  order_var = if_else(review_authors == "Summary (SCE+)", 1.1, order_var),
+#  
+#) |> 
+#ungroup() |>  
 arrange(role, desc(order_var)) |> 
 mutate(
   review_authors = factor(review_authors, levels = unique(review_authors))
 ) |> 
 ggplot(aes(x = val, xmin = ci.lb, xmax = ci.ub, reorder_within(review_authors, desc(order_var), role), color = review_authors, alpha = 0.5)) + 
 geom_pointrange(position = position_dodge2(width = 0.5, padding = 0.5)) +
-geom_vline(data = vline_dat, aes(xintercept = val), linetype = "dashed") + 
+geom_vline(data = vline_dat, aes(xintercept = val), linetype = 4) + 
 #scale_x_continuous(limits = c(0.4,1), breaks = seq(0L, 1L, 0.1)) +
 scale_y_reordered() +
 facet_grid(role~metric, scales = "free") +
+#geom_polygon(aes(x=c(sum.x1, sum.x2), y=c(sum.y1, sum.y2)), color = "black", alpha = 1) +
 theme_bw() +
 theme(
   legend.position="none",
@@ -184,4 +329,5 @@ theme(
   axis.title.x = element_text(vjust = -0.75)
 ) +
 labs(x = "Estimate", y = "Campbell Systematic Review")
-dev.off()
+#dev.off()
+
