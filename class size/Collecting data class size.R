@@ -168,6 +168,9 @@ cl_size_dat <-
   ) |> 
   ungroup()
 
+n_refs <- cl_size_dat |> filter(n_screeners %in% c(2, 3)) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/cl_size_n_refs.rds")
+
 cl_size_dat_2screen <- 
   cl_size_dat |> 
   # Removing train data plus uncertainty decisions

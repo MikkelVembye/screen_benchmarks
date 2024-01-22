@@ -162,6 +162,9 @@ child_ratio_dat <-
   ) |> 
   ungroup()
 
+n_refs <- child_ratio_dat |> filter(n_screeners == 2) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/child_ratio_refs.rds")
+
 child_ratio_dat_2screen <- 
   child_ratio_dat |> 
   filter(n_screeners == 2) |> 

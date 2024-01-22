@@ -164,6 +164,9 @@ dev_train_dat <-
   ) |> 
   ungroup()
 
+n_refs <- dev_train_dat |> filter(n_screeners == 2) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/dev_train_n_refs.rds")
+
 dev_train_dat_2screen <- 
   dev_train_dat |> 
   filter(n_screeners == 2) |>

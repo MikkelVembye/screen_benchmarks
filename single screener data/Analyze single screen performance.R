@@ -15,14 +15,23 @@ options(pillar.sigfig = 4) # ensure tibble include 4 digits
 options(scipen = 10)
 options(dplyr.summarise.inform = FALSE) # Avoids summarize info from tidyverse
 
-# Loading data
+# Number of double-screened references
+path_list <- list.files(path = "single screener data/Number of References/", pattern = "_refs")
 
+n_references <- 
+  map(path_list, ~ readRDS(paste0("single screener data/Number of References/", .x))) |> 
+  list_c() |> 
+  sum()
+
+n_references
+
+# Loading performance data
 path <- list.files(path = "single screener data/", pattern = "_dat")
 
 dat_raw <- 
   map(path, ~ readRDS(paste0("single screener data/", .x))) |> 
   list_rbind() |> 
-  #filter(screener != "Erika Lundqvist") |> 
+  filter(screener != "Erika Lundqvist") |> 
   rowwise() |> 
   mutate(
     nom = (TP*TN) - (FP*FN),
@@ -59,7 +68,7 @@ dat_long <-
     names_sep = '_'
   ) |> 
   mutate(
-    n = if_else(Category == 'bacc', round(val*N), n)
+    n = if_else(Category == 'bacc', round(val*N), n),
   ) |> 
   rename(metric = Category) |> 
   rowwise() |> 
@@ -79,7 +88,7 @@ dat_long_cor <-
 
 # Account for Schwarzer et al. critique
 dat_trans_prop <- 
-  escalc(measure="PAS", xi=n, ni=N, data=dat_long_prop) |> 
+  metafor::escalc(measure="PAS", xi=n, ni=N, data=dat_long_prop) |> 
   mutate(
     esid = 1:n()
   ) 

@@ -176,6 +176,9 @@ sch_rev_dat <-
   ) |> 
   ungroup()
 
+n_refs <- sch_rev_dat |> filter(n_screeners == 2 & uncertain == "") |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/sch_rev_n_refs.rds")
+
 sch_rev_dat_2screen <- 
   sch_rev_dat |> 
   # Removing train data plus uncertainty decisions

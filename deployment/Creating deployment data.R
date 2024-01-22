@@ -119,7 +119,7 @@ deploy_single_perform_dat <-
   relocate(review_authors:role) 
   
 
-saveRDS(deploy_single_perform_dat, "single screener data/deploy_single_perform_dat.rds")
+saveRDS(deploy_single_perform_dat, "single screener data/All screenings/deploy_single_perform_dat.rds")
 
 #----------------------------------------------------------------------------------------
 # Extracting all individual screener scores in wide format to exclude training references
@@ -142,6 +142,9 @@ deploy_dat <-
     n_screeners = sum(!is.na(c_across(`Ida Rasmussen`:`Trine Filges`)))
   ) |> 
   ungroup()
+
+n_refs <- deploy_dat |> filter(n_screeners == 2) |> nrow()
+saveRDS(n_refs, "single screener data/Number of References/deploy_n_refs.rds")
 
 deploy_dat_2screen <- 
   deploy_dat |> 
