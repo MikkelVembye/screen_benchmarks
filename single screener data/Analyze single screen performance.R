@@ -16,14 +16,21 @@ options(scipen = 10)
 options(dplyr.summarise.inform = FALSE) # Avoids summarize info from tidyverse
 
 # Number of double-screened references
-path_list <- list.files(path = "single screener data/Number of References/", pattern = "_refs")
+path_list <- list.files(path = "single screener data/Number of References/", pattern = "n_refs")
 
 n_references <- 
   map(path_list, ~ readRDS(paste0("single screener data/Number of References/", .x))) |> 
-  list_c() |> 
-  sum()
+  list_c()
 
-n_references
+review_name <- path_list |> str_remove_all("_n_refs.rds")
+
+# For table in paper
+descrip_info <- tibble(review_name, n_references)
+descrip_info
+
+#Total number of references
+N_refs <- n_references |> sum()
+N_refs
 
 # Loading performance data
 path <- list.files(path = "single screener data/", pattern = "_dat")
@@ -59,6 +66,16 @@ dat_raw <-
     val_bacc = bacc,
     val_nMCC = nMCC
   )
+
+# Number of screeners across studies
+
+dat_raw |> 
+  summarise(
+    n_ass = sum(role == "Assistant"),
+    n_aus = sum(role == "Author"),
+    .by = review
+  )
+
 
 dat_long <- 
   dat_raw |> 

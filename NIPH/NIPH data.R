@@ -1263,19 +1263,27 @@ rm(list = ls())
 # Number of double-screened references
 path_list <- list.files(path = "NIPH/Data/n references/", pattern = "_refs")
 
+# Removing evidence and gap map
+path_list <- path_list[-5]
+
 n_references <- 
   map(path_list, ~ readRDS(paste0("NIPH/Data/n references/", .x))) |> 
-  list_c() |> 
-  sum()
+  list_c() 
 
-n_references
+# Total number of references
+n_references |> sum()
 
 # Loading performance data
 path <- list.files(path = "NIPH/Data/", pattern = "_dat")
 
+# Removing evidence and gap map
+path <- path[-5]
+
+
 dat_raw <- 
   map(path, ~ readRDS(paste0("NIPH/Data/", .x))) |> 
   list_rbind() |> 
+  filter() |> 
   rowwise() |> 
   mutate(
     nom = (TP*TN) - (FP*FN),
@@ -1306,6 +1314,13 @@ dat_raw <-
   relocate(review, .after = review_authors) |> 
   # removing Jose  Meneses Echavez. Screening one relevant study only
   filter(screener != "Jose  Meneses Echavez")
+
+# Numbers of screeners for paper
+dat_raw |> 
+  summarise(
+    n_screeners = n(),
+    .by = review_authors
+  )
 
 dat_long <- 
   dat_raw |> 
@@ -1505,6 +1520,7 @@ vline_dat <-
   model_res_dat  |> 
   select(role, metric, val)
 
+
 # Recalculate order variable via metafor
 png("NIPH/NIPH res figure.png", height = 5, width = 11, unit = "in", res = 600)
 dat |> 
@@ -1520,7 +1536,7 @@ dat |>
   geom_pointrange(position = position_dodge2(width = 0.5, padding = 0.5)) +
   geom_vline(data = vline_dat, aes(xintercept = val), linetype = 4) + 
   #scale_x_continuous(limits = c(0.4,1), breaks = seq(0L, 1L, 0.1)) +
-  scale_y_reordered() +
+  scale_y_reordered() + 
   facet_grid(role~metric, scales = "free") +
   theme_bw() +
   theme(
