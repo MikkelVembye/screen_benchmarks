@@ -150,6 +150,10 @@ outreach_dat <-
 n_refs <- outreach_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/outreach_n_refs.rds")
 
+n_in <- outreach_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/outreach_n_in.rds")
+
+
 outreach_dat_2screen <- 
   outreach_dat |> 
   filter(n_screeners == 2) |>

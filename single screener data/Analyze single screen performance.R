@@ -22,10 +22,16 @@ n_references <-
   map(path_list, ~ readRDS(paste0("single screener data/Number of References/", .x))) |> 
   list_c()
 
+path_list2 <- list.files(path = "single screener data/Number of References/", pattern = "n_in")
+
+n_in <- 
+  map(path_list2, ~ readRDS(paste0("single screener data/Number of References/", .x))) |> 
+  list_c()
+
 review_name <- path_list |> str_remove_all("_n_refs.rds")
 
 # For table in paper
-descrip_info <- tibble(review_name, n_references)
+descrip_info <- tibble(review_name, n_in, n_references)
 descrip_info
 
 #Total number of references

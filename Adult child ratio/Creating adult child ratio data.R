@@ -165,6 +165,9 @@ child_ratio_dat <-
 n_refs <- child_ratio_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/child_ratio_refs.rds")
 
+n_in <- child_ratio_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/child_ratio_n_in.rds")
+
 child_ratio_dat_2screen <- 
   child_ratio_dat |> 
   filter(n_screeners == 2) |> 

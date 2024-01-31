@@ -159,19 +159,25 @@ volentary_dat <-
   mutate(
     n_screeners = sum(!is.na(c_across(`Caroline Fromberg Kiehn`:`Julie Kaas Seerup`)))
   ) |> 
-  ungroup() |> 
-  filter(if_all(`Caroline Fromberg Kiehn`:`Anton Dam`))
+  ungroup() 
+  
 
-n_refs <- 
-  volentary_dat |> 
-  filter(n_screeners == 2 & if_all(`Caroline Fromberg Kiehn`:`Anton Dam`, ~ !is.na(.x)) & is.na(`Trine Filges`)) |> 
+n_refs <- volentary_dat |> 
+  filter(if_all(`Caroline Fromberg Kiehn`:`Anton Dam`, ~ !is.na(.x)) & is.na(`Trine Filges`)) |> 
   nrow()
 
 saveRDS(n_refs, "single screener data/Number of References/volentary_n_refs.rds")
 
+n_in <- 
+  volentary_dat |> 
+  filter(final_human_decision == 1 & if_all(`Caroline Fromberg Kiehn`:`Anton Dam`, ~ !is.na(.x)) & is.na(`Trine Filges`)) |> 
+  nrow()
+
+saveRDS(n_in, "single screener data/Number of References/volentary_n_in.rds")
+
 volentary_dat_2screen <- 
   volentary_dat |> 
-  filter(n_screeners == 2) |>
+  #filter(n_screeners == 2) |>
   filter(if_all(`Caroline Fromberg Kiehn`:`Anton Dam`, ~ !is.na(.x)) & is.na(`Trine Filges`)) |> 
   select(-n_screeners) |> 
   pivot_longer(
@@ -185,7 +191,6 @@ volentary_dat_2screen <-
 
 volentary_single_perform_dat_2screen <- 
   volentary_dat_2screen |> 
-  #filter(!if_any(include:exclude, ~ .x == "Trine Filges")) |> # Only contain four references
   summarise(
     TP = sum(screener_decision == 1 & final_human_decision == 1, na.rm = TRUE),
     TN = sum(screener_decision == 0 & final_human_decision == 0, na.rm = TRUE),

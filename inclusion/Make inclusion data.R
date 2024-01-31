@@ -173,6 +173,10 @@ inclusion_dat <-
 n_refs <- inclusion_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/inclusion_n_refs.rds")
 
+n_in <- inclusion_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/inclusion_n_in.rds")
+
+
 inclusion_dat_2screen <- 
   inclusion_dat |> 
   filter(n_screeners == 2) |>

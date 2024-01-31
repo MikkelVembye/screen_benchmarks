@@ -162,6 +162,9 @@ grp_based_dat <-
 n_refs <- grp_based_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/grp_based_n_refs.rds")
 
+n_in <- grp_based_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/grp_based_n_in.rds")
+
 grp_based_dat_2screen <- 
   grp_based_dat |> 
   filter(n_screeners == 2) |>

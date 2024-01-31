@@ -68,6 +68,9 @@ friends_dat_wide <-
 n_refs <- friends_dat_wide |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/friends_n_refs.rds")
 
+n_in <- friends_dat_wide |> filter(final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/friends_n_in.rds")
+
 # Detecting individual screener names
 screeners_var <- 
   screen_report_dat |> 

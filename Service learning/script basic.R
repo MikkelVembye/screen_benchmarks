@@ -191,6 +191,10 @@ service_dat <-
 n_refs <- service_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/service_n_refs.rds")
 
+n_in <- service_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/service_n_in.rds")
+
+
 service_dat_2screen <- 
   service_dat |> 
   filter(n_screeners == 2) |>

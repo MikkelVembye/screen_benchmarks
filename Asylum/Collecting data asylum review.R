@@ -165,6 +165,9 @@ asylum_dat <-
 n_refs <- asylum_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/asylum_n_refs.rds")
 
+n_in <- asylum_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/asylum_n_in.rds")
+
 cor_dat <- 
   asylum_dat |> 
   filter(n_screeners == 2) |> 
@@ -176,7 +179,6 @@ cor_dat <-
 
 cor_mat <- cor(cor_dat) |> as.data.frame()
 saveRDS(cor_mat, "single screener data/Between screener correlation/asylum_cor_mat.rds")  
-
 
 asylum_dat_2screen <- 
   asylum_dat |> 

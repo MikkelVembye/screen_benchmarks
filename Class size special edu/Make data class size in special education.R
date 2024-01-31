@@ -163,6 +163,9 @@ spec_edu_dat <-
 n_refs <- spec_edu_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/spec_edu_n_refs.rds")
 
+n_in <- spec_edu_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/spec_edu_n_in.rds")
+
 cor_dat <- 
   spec_edu_dat |> 
   filter(n_screeners == 2) |> 

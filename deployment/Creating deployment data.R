@@ -146,6 +146,9 @@ deploy_dat <-
 n_refs <- deploy_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/deploy_n_refs.rds")
 
+n_in <- deploy_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/deploy_n_in.rds")
+
 deploy_dat_2screen <- 
   deploy_dat |> 
   filter(n_screeners == 2) |>

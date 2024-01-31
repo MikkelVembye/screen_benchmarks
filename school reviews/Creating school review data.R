@@ -179,6 +179,9 @@ sch_rev_dat <-
 n_refs <- sch_rev_dat |> filter(n_screeners == 2 & uncertain == "") |> nrow()
 saveRDS(n_refs, "single screener data/Number of References/sch_rev_n_refs.rds")
 
+n_in <- sch_rev_dat |> filter(n_screeners == 2 & uncertain == "" & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "single screener data/Number of References/sch_rev_n_in.rds")
+
 sch_rev_dat_2screen <- 
   sch_rev_dat |> 
   # Removing train data plus uncertainty decisions
