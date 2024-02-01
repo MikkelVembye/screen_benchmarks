@@ -145,6 +145,9 @@ first_epi_dat <-
 n_refs <- first_epi_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "NIPH/Data/n references/first_epi_n_refs.rds")
 
+n_in <- first_epi_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "NIPH/Data/n references/first_epi_n_in.rds")
+
 first_epi_dat_2screen <- 
   first_epi_dat |> 
   # Removing train data plus single screened references
@@ -312,6 +315,9 @@ joint_dat <-
 
 n_refs <- joint_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "NIPH/Data/n references/joint_n_refs.rds")
+
+n_in <- joint_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "NIPH/Data/n references/joint_n_in.rds")
 
 joint_dat_2screen <- 
   joint_dat |> 
@@ -501,6 +507,9 @@ psyc_deb_dat <-
 n_refs <- psyc_deb_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "NIPH/Data/n references/psyc_deb_n_refs.rds")
 
+n_in <- psyc_deb_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "NIPH/Data/n references/psyc_deb_n_in.rds")
+
 psyc_deb_dat_2screen <- 
   psyc_deb_dat |> 
   # Removing train data plus single screened references
@@ -663,6 +672,9 @@ rotator_dat <-
 
 n_refs <- rotator_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "NIPH/Data/n references/rotator_n_refs.rds")
+
+n_in <- rotator_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "NIPH/Data/n references/rotator_n_in.rds")
 
 rotator_dat_2screen <- 
   rotator_dat |> 
@@ -848,6 +860,9 @@ self_dat <-
 
 n_refs <- self_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "NIPH/Data/n references/self_n_refs.rds")
+
+n_in <- self_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "NIPH/Data/n references/self_n_in.rds")
 
 self_dat_2screen <- 
   self_dat |> 
@@ -1213,6 +1228,9 @@ WHO_dat <-
 n_refs <- WHO_dat |> filter(n_screeners == 2) |> nrow()
 saveRDS(n_refs, "NIPH/Data/n references/WHO_n_refs.rds")
 
+n_in <- WHO_dat |> filter(n_screeners == 2 & final_human_decision == 1) |> nrow()
+saveRDS(n_in, "NIPH/Data/n references/WHO_n_in.rds")
+
 WHO_dat_2screen <- 
   WHO_dat |> 
   # Removing train data plus single screened references
@@ -1273,12 +1291,30 @@ n_references <-
 # Total number of references
 n_references |> sum()
 
+# Number of included double-screened references
+path_list2 <- list.files(path = "NIPH/Data/n references/", pattern = "n_in")
+
+# Removing evidence and gap map
+path_list2 <- path_list2[-5]
+
+n_in <- 
+  map(path_list2, ~ readRDS(paste0("NIPH/Data/n references/", .x))) |> 
+  list_c() 
+
+tibble(
+  review = str_remove_all(path_list, "_n_refs.rds"),
+  n_references, 
+  n_in
+)
+
+# Total number of references
+n_references |> sum()
+
 # Loading performance data
 path <- list.files(path = "NIPH/Data/", pattern = "_dat")
 
 # Removing evidence and gap map
 path <- path[-5]
-
 
 dat_raw <- 
   map(path, ~ readRDS(paste0("NIPH/Data/", .x))) |> 
