@@ -327,7 +327,7 @@ vline_dat <-
   arrange(role)
 
 # Recalculate order variable via metafor
-png("single screener data/Figures/facet_grid fig.png", height = 7, width = 12, unit = "in", res = 600)
+#png("single screener data/Figures/facet_grid fig.png", height = 7, width = 12, unit = "in", res = 600)
 dat |> 
 mutate(
   order_var = weighted.mean(val, N),
@@ -361,5 +361,5 @@ theme(
   axis.title.x = element_text(vjust = -0.75)
 ) +
 labs(x = "Estimate", y = "Campbell Systematic Review")
-dev.off()
+#dev.off()
 
