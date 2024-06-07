@@ -71,6 +71,12 @@ dat_raw <-
     val_spec = spec, 
     val_bacc = bacc,
     val_nMCC = nMCC
+  ) |> 
+  mutate(
+    screener = case_when(
+      str_detect(screener, "ildemoes") ~ "Malene Wallach Kildemoes",
+      TRUE ~ screener
+    )
   )
 
 # Number of screeners across studies
@@ -234,7 +240,7 @@ model_res_dat <-
     role = if_else(role == "Assistant", "Assistant / Non-Content Expert", role),
     role = factor(role, levels = c("Assistant / Non-Content Expert", "Author"))
   ) |> 
-  arrange(role)
+  arrange(metric)
   
 
 # For paper only 
