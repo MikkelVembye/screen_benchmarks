@@ -206,32 +206,32 @@ saveRDS(child_ratio_single_perform_dat_2screen, "single screener data/child_rati
 #------------------------------------------------------------------------------
 # Old
 #------------------------------------------------------------------------------
-child_ratio_dat <- 
-  left_join(screen_report_dat, child_ratio_ris_dat, by = join_by(eppi_id)) |> 
-  #select(-c(author_short, title_report)) |> 
-  #relocate(exclude:include, .before = final_human_decision) |> 
-  arrange(final_human_decision) |> 
-  mutate(
-    review_authors = "Dalgaard et al. (2022)",
-    review = "Adult child ratio",
-    studyid = 1:n(),
-    abstract = str_remove_all(abstract, "\\<bold\\>"),
-    conflict = if_else(!is.na(exclude) & !is.na(include), 1, 0)
-  ) |> 
-  relocate(studyid, .after = eppi_id) |> 
-  relocate(author) |> 
-  relocate(review_authors:review)
-
-# Level of conflicts
-child_ratio_dat |> 
-  summarise(
-    number_of_references = n(),
-    number_of_conflicts = sum(conflict == 1), 
-    percent_conflict = mean(conflict == 1),
-    .by = final_human_decision
-  )
-
-saveRDS(child_ratio_dat, file = "all data sets/child_ratio_dat.rds")
+#child_ratio_dat <- 
+#  left_join(screen_report_dat, child_ratio_ris_dat, by = join_by(eppi_id)) |> 
+#  #select(-c(author_short, title_report)) |> 
+#  #relocate(exclude:include, .before = final_human_decision) |> 
+#  arrange(final_human_decision) |> 
+#  mutate(
+#    review_authors = "Dalgaard et al. (2022)",
+#    review = "Adult child ratio",
+#    studyid = 1:n(),
+#    abstract = str_remove_all(abstract, "\\<bold\\>"),
+#    conflict = if_else(!is.na(exclude) & !is.na(include), 1, 0)
+#  ) |> 
+#  relocate(studyid, .after = eppi_id) |> 
+#  relocate(author) |> 
+#  relocate(review_authors:review)
+#
+## Level of conflicts
+#child_ratio_dat |> 
+#  summarise(
+#    number_of_references = n(),
+#    number_of_conflicts = sum(conflict == 1), 
+#    percent_conflict = mean(conflict == 1),
+#    .by = final_human_decision
+#  )
+#
+#saveRDS(child_ratio_dat, file = "all data sets/child_ratio_dat.rds")
 
 
 

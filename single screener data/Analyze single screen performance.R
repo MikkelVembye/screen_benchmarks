@@ -39,7 +39,7 @@ N_refs <- n_references |> sum()
 N_refs
 
 # Loading performance data
-path <- list.files(path = "single screener data/", pattern = "_dat")
+path <- list.files(path = "single screener data/", pattern = "dat_2")
 
 dat_raw <- 
   map(path, ~ readRDS(paste0("single screener data/", .x))) |> 
@@ -78,7 +78,7 @@ dat_raw <-
 dat_raw |> 
   summarise(
     n_ass = sum(role == "Assistant"),
-    n_aus = sum(role == "Author"),
+    n_aut = sum(role == "Author"),
     .by = review
   )
 

@@ -28,14 +28,14 @@ screen_report_dat <-
     exclude = EXCLUDE,
     include = `INCLUDE on title & abstract`
   ) |> 
-  mutate(
-    across(exclude:include, ~ str_replace_all(.x, "Malene  Wallach Kildemoes", "Screener1")),
-    across(exclude:include, ~ str_replace_all(.x, "Juliane  Esper Ramstedt", "Screener2")),
-    across(exclude:include, ~ str_replace_all(.x, "Anja Bondebjerg", "Screener3")),
-    across(exclude:include, ~ str_replace_all(.x, "Maluhs Christensen", "Screener4")),
-    across(exclude:include, ~ str_replace_all(.x, "Nina Thorup Dalgaard", "Screener5")),
-    across(exclude:include, ~ str_replace_all(.x, "Katrine Nielsen", "Screener6"))
-  ) |> 
+#  mutate(
+#    across(exclude:include, ~ str_replace_all(.x, "Malene  Wallach Kildemoes", "Screener1")),
+#    across(exclude:include, ~ str_replace_all(.x, "Juliane  Esper Ramstedt", "Screener2")),
+#    across(exclude:include, ~ str_replace_all(.x, "Anja Bondebjerg", "Screener3")),
+#    across(exclude:include, ~ str_replace_all(.x, "Maluhs Christensen", "Screener4")),
+#    across(exclude:include, ~ str_replace_all(.x, "Nina Thorup Dalgaard", "Screener5")),
+#    across(exclude:include, ~ str_replace_all(.x, "Katrine Nielsen", "Screener6"))
+#  ) |> 
   arrange(eppi_id) 
 
 
@@ -74,7 +74,7 @@ spec_edu_dat_wide <-
 
 #rm(spec_edu_excl, spec_edu_incl)
 
-screeners <- paste0("Screener", 1:6)
+#screeners <- paste0("Screener", 1:6)
 
 # Screener 1 = Assistant
 # Screener 2 = Assistant
@@ -83,6 +83,20 @@ screeners <- paste0("Screener", 1:6)
 # Screener 5 = Author
 # Screener 6 = Assistant
  
+
+# Detecting individual screener names
+screeners_var <- 
+  screen_report_dat |> 
+  reframe(
+    name = unique(c_across(exclude:include))
+  ) |> 
+  pull(name)
+
+screeners <- 
+  unlist(strsplit(screeners_var, "(?<=[a-z])(?=[A-Z])", perl = TRUE)) |> 
+  gsub("\\[.*","", x = _) |> 
+  unique() 
+
 
 filter_list <- list()
 
@@ -156,7 +170,7 @@ spec_edu_dat <-
   relocate(final_human_decision, .after = last_col()) |> 
   rowwise() |> 
   mutate(
-    n_screeners = sum(!is.na(c_across(Screener1:Screener6)))
+    n_screeners = sum(!is.na(c_across(`Malene  Wallach Kildemoes`:`Katrine Nielsen`)))
   ) |> 
   ungroup()
 
@@ -169,7 +183,7 @@ saveRDS(n_in, "single screener data/Number of References/spec_edu_n_in.rds")
 cor_dat <- 
   spec_edu_dat |> 
   filter(n_screeners == 2) |> 
-  select(Screener1:Screener6) |> 
+  select(`Malene  Wallach Kildemoes`:`Katrine Nielsen`) |> 
   mutate(
     across(everything(), ~ as.integer(.x))
   )
@@ -199,7 +213,7 @@ spec_edu_dat_2screen <-
   filter(n_screeners == 2) |> 
   select(-n_screeners) |> 
   pivot_longer(
-    cols = Screener1:Screener6,
+    cols = `Malene  Wallach Kildemoes`:`Katrine Nielsen`,
     names_to = "screener",
     values_to = "screener_decision"
   ) |> 
