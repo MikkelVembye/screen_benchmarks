@@ -189,8 +189,8 @@ maSCEp <- function(filter, scale, data = dat_trans, rho = 0.7){
      val = transf.iarcsin(sce$beta),
      ci.lb = transf.iarcsin(sce$ci.lb),
      ci.ub = transf.iarcsin(sce$ci.ub),
-     tau = sqrt(sce$tau2),
-     omega = sqrt(sce$gamma2)
+     tau = sqrt(transf.iarcsin(sce$tau2)),
+     omega = sqrt(transf.iarcsin(sce$gamma2))
    ) 
     
   }
@@ -207,8 +207,8 @@ maSCEp <- function(filter, scale, data = dat_trans, rho = 0.7){
     val = (exp(2*b)-1)/(exp(2*b) + 1),
     ci.lb = (exp(2*cil)-1)/(exp(2*cil) + 1),
     ci.ub = (exp(2*ciu)-1)/(exp(2*ciu) + 1),
-    tau = sqrt(sce$tau2),
-    omega = sqrt(sce$gamma2)
+    tau = sqrt((exp(2*sce$tau2)-1)/(exp(2*sce$tau2) + 1)),
+    omega = sqrt((exp(2*sce$gamma2)-1)/(exp(2*sce$gamma2) + 1))
   ) 
     
   }

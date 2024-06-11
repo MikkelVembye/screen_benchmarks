@@ -1461,8 +1461,8 @@ maCHEp <- function(filter, scale, data = dat_trans, rho = 0.7){
       val = transf.iarcsin(CHE$beta),
       ci.lb = transf.iarcsin(CHE$ci.lb),
       ci.ub = transf.iarcsin(CHE$ci.ub),
-      tau = sqrt(CHE$sigma2[1]),
-      omega = sqrt(CHE$sigma2[2])
+      tau = sqrt(transf.iarcsin(CHE$sigma2[1])),
+      omega = sqrt(transf.iarcsin(CHE$sigma2[2]))
     ) 
     
   }
@@ -1478,8 +1478,8 @@ maCHEp <- function(filter, scale, data = dat_trans, rho = 0.7){
       val = (exp(2*b)-1)/(exp(2*b) + 1),
       ci.lb = (exp(2*cil)-1)/(exp(2*cil) + 1),
       ci.ub = (exp(2*ciu)-1)/(exp(2*ciu) + 1),
-      tau = sqrt(CHE$sigma2[1]),
-      omega = sqrt(CHE$sigma2[2])
+      tau = sqrt((exp(2*CHE$sigma2[1])-1)/(exp(2*CHE$sigma2[1]) + 1)),
+      omega = sqrt((exp(2*CHE$sigma2[2])-1)/(exp(2*CHE$sigma2[2]) + 1))
     ) 
     
   }
