@@ -241,7 +241,7 @@ spec_edu_single_perform_dat_2screen <-
   mutate(
     review_authors = "Bondebjerg et al. (2023)",
     review = "Class size (special edu)",
-    role = c("Assistant", "Assistant", "Author", "Assistant", "Author", "Assistant")
+    role = rep(c("Author", "Assistant", "Author"), c(1, 4, 1))
   ) |> 
   relocate(review_authors:role)
 
