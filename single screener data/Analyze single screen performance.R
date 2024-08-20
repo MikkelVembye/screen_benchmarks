@@ -331,11 +331,16 @@ dat <-
 vline_dat <- 
   model_res_dat  |> 
   select(role, metric, val) |> 
-  arrange(role)
+  arrange(role) |> 
+  filter(metric != "nMCC") 
 
 # Recalculate order variable via metafor
 #png("single screener data/Figures/facet_grid fig.png", height = 7, width = 12, unit = "in", res = 600)
-dat |> 
+dat_prop |> 
+mutate(
+  role = if_else(role == "Assistant", "Assistant / Non-Content Expert", role),
+  role = factor(role, levels = c("Assistant / Non-Content Expert", "Author"))
+) |> 
 mutate(
   order_var = weighted.mean(val, N),
   .by = c(review_authors, role, metric)

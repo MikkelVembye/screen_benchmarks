@@ -1554,12 +1554,14 @@ dat <-
 
 vline_dat <- 
   model_res_dat  |> 
-  select(role, metric, val)
+  select(role, metric, val) |> 
+  filter(metric != "nMCC") 
 
 
 # Recalculate order variable via metafor
 #png("NIPH/NIPH res figure.png", height = 5, width = 11, unit = "in", res = 600)
-dat |> 
+  dat_prop |> 
+  mutate(role = "Researcher") |> 
   mutate(
     order_var = weighted.mean(val, N),
     .by = c(review_authors, role, metric)
