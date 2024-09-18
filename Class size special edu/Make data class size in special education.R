@@ -186,7 +186,13 @@ cor_dat <-
   select(`Malene  Wallach Kildemoes`:`Katrine Nielsen`) |> 
   mutate(
     across(everything(), ~ as.integer(.x))
-  )
+  ) |> 
+  relocate(`Anja Bondebjerg`) |> 
+  relocate(`Juliane  Esper Ramstedt`, .after = `Anja Bondebjerg`) |> 
+  relocate(`Katrine Nielsen`, .after = `Juliane  Esper Ramstedt`) |> 
+  relocate(`Malene  Wallach Kildemoes`, .after = `Katrine Nielsen`) |> 
+  relocate(`Maluhs Christensen`, .after = `Malene  Wallach Kildemoes`) |> 
+  relocate(`Nina Thorup Dalgaard`, .after = last_col())
 
 #constant_cor <- 0.5
 #cor_mat <- 
@@ -200,12 +206,17 @@ cor_dat <-
 cor_mat <- 
   cor(cor_dat, use = "pairwise.complete.obs") |> 
   as.data.frame() |> 
-  tibble::rownames_to_column(var = "screener") |> 
-  as_tibble() 
+  remove_rownames() |> 
+  mutate(
+    across(everything(), ~ if_else(is.na(.x), 0, .x))
+  )
+  
+  
+colnames(cor_mat) <- paste0("r", 1:ncol(cor_mat))
 
+  
 #names(cor_mat) <- paste0("r", 1:6)
-
-saveRDS(cor_mat, "single screener data/Between screener correlation/spec_edu_cor_mat.rds")  
+#saveRDS(cor_mat, "single screener data/Between screener correlation/spec_edu_cor_mat.rds")  
 
 spec_edu_dat_2screen <- 
   spec_edu_dat |> 
@@ -239,13 +250,77 @@ spec_edu_single_perform_dat_2screen <-
   ) |> 
   ungroup() |> 
   mutate(
+    
     review_authors = "Bondebjerg et al. (2023)",
     review = "Class size (special edu)",
     role = rep(c("Author", "Assistant", "Author"), c(1, 4, 1))
   ) |> 
-  relocate(review_authors:role)
+  relocate(review_authors:role) |> 
+  bind_cols(cor_mat)
 
 #left_join(spec_edu_single_perform_dat_2screen, cor_mat, by = join_by(screener))
 
 saveRDS(spec_edu_single_perform_dat_2screen, "single screener data/spec_edu_single_perform_dat_2screen.rds")
+
+# Creating data with with correlation estimates --------------------------------
+
+dat_long <- 
+  spec_edu_single_perform_dat_2screen |> 
+  mutate(
+    N_recall = TP + FN,
+    N_spec = TN + FP,
+    N_bacc = N_recall + N_spec,
+    n_recall = TP,
+    n_spec = TN,
+    n_bacc = TP + TN
+  ) |> 
+  rename(
+    val_recall = recall,
+    val_spec = spec, 
+    val_bacc = bacc
+  ) |> 
+  pivot_longer(
+    cols = -c(review_authors:FP),
+    names_to = c('.value', 'Category'),
+    names_sep = '_'
+  ) |> 
+  mutate(
+    n = if_else(Category == 'bacc', round(val*N), n),
+  ) |> 
+  rename(metric = Category) |> 
+  rowwise() |> 
+  mutate(
+    total_ref = sum(c_across(TP:FP))
+  ) |> 
+  ungroup()
+
+dat_trans_prop <- 
+  metafor::escalc(measure="PAS", xi=n, ni=N, data=dat_long) |> 
+  mutate(
+    esid = 1:n()
+  )
+
+
+save_varcov <- function(measure){
+  
+  dat <- 
+    dat_trans_prop |> 
+    filter(str_detect(metric, measure)) |> 
+    bind_cols(cor_mat)
+  
+  v_mat <- 
+    metafor::vcalc(vi, cluster = review_authors, rvars = c(r1:r6), data = dat) |> 
+    suppressWarnings()
+  
+  saveRDS(
+    v_mat, 
+    file = paste0("single screener data/varcov/", measure,"/spec_edu_v_mat_", measure, ".rds")
+    )
+  
+}
+
+map(unique(dat_trans_prop$metric), .f = save_varcov)
+
+  
+
 
