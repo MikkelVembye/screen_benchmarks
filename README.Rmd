@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 # README: Benckmark Scheme to Compare AI screening Performance with Humans
 
-This repository contains all data and code behind the title and abstract screening benchmark scheme developed in Vembye, Christensen, Mølgaard, & Schytt [-@Vembye2024_gpt]. Below, we provide guidance on how to find the data, code, and analyses behind this scheme.
+This repository contains all data and code behind the title and abstract screening benchmark scheme developed in Vembye, Christensen, Mølgaard, & Schytt [-@Vembye2024_gpt]. Below, we provide guidance on how to find the data, code, and analyses behind this scheme. If you experience any issue with reproducing our analysis, please contact Mikkel Vembye at mihv@vive.dk.
 
 # Data Folders
 

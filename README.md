@@ -6,7 +6,9 @@
 This repository contains all data and code behind the title and abstract
 screening benchmark scheme developed in Vembye, Christensen, Mølgaard, &
 Schytt ([2024](#ref-Vembye2024_gpt)). Below, we provide guidance on how
-to find the data, code, and analyses behind this scheme.
+to find the data, code, and analyses behind this scheme. If you
+experience any issue with reproducing our analysis, please contact
+Mikkel Vembye at <mihv@vive.dk>.
 
 # Data Folders
 
