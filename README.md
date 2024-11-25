@@ -65,7 +65,9 @@ data** folder.
 
 The screening data used for analyzing the screening performance in the
 NIPH (Norwegian Institute of Public Health) reviews is stored in the
-NIPH folder. The NIPH folder contains the following subfolders:  
+NIPH folder.  
+
+The NIPH folder contains the following subfolders:  
 
 - **Data:** contains the single screeners performance data  
 - **First episode psychosis:** contains all material for Jardim et al.
@@ -85,7 +87,7 @@ Each folder contains the raw html screening data behind the review and
 the RIS files for the included and excluded studies.  
 
 All screening performances analyses from the NIPH reviews can be found
-in the **NIPH dada and analysis.R** file.
+in the **NIPH data and analysis.R** file.
 
 # Irrelavant Head Folders
 
