@@ -1,5 +1,8 @@
 ---
 output: github_document
+bibliography: Screen benchmarks.bib
+link-citations: yes
+csl: apa.csl
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -11,5 +14,60 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Benckmark Scheme to Assess the Screening Quality of AI screening Tools
+# Benckmark Scheme to Compare AI screening Performance with Humans
 
+This repository contains all data and code behind the title and abstract screening benchmark scheme developed in Vembye, Christensen, Mølgaard, & Schytt [-@Vembye2024_gpt]. Below, we provide guidance on how to find the data, code, and analyses behind this scheme.
+
+# Data Folders
+
+In the head folder you find a range of folders containing all screening material for each of the 17 included Campbell Systematic Reviews. Each folder contains the raw html screening data behind the review, the RIS files for the included and excluded studies, and an R script in which the individual screener performance data is created. 
+
+The specific folders are: 
+\ 
+
+  * **Adult Child Ratio:** contains all material for Dalgaard, Bondebjerg, Klokker et al. [-@Dalgaard2022] 
+  * **Asylum:** contains all material for Filges, Montgomery et al. [-@Filges2015b] 
+  * **Class Size:** contains all material for Filges, Sonne-Schmidt et al. et al. [-@Filges2018]
+  * **Class Size Special Edu:** contains all material for Bondebjerg et al. [-@Bondebjerg2023]
+  * **Deployment:** contains all material for Bøg et al. [-@Bøg2018] 
+  * **Development Training:** contains all material for Filges, Torgerson et al. [-@Filges2019]
+  * **Foster Adoptive:** contains all material for Dalgaard, Filges et al. [-@Dalgaard2022c]
+  * **FRIENDS** contains all material for Filges, Smedslund et al. [-@Filges2023]
+  * **Group-Based:** contains all material for Dalgaard, Jensen et al. [-@Dalgaard2022a]
+  * **Inclusion:** contains all material for Dalgaard, Bondebjerg, Viinholt et al. [-@Dalgaard2022b]
+  * **Outreach:** contains all material for Filges, Dalgaard et al. [-@Filges2022]
+  * **School Reviews:** contains all material for Dietrichson et al. [-@Dietrichson2020; -@Dietrichson2021]
+  * **Service Learning:** contains all material for Filges, Dietrichson et al. [-@Filges2022a]
+  * **Sport:** contains all material for Filges, Verner et al. [-@Filges2023a]
+  * **TF:** contains all material for Thomsen et al. [-@Thomsen2022]
+  * **Voluntary:** contains all material for Filges, Siren et al. [-@Filges2020]
+
+Within each of the R scripts stored in the above folders, the single screener data generated was saved to the **single screener data** folder. The data sets used for the main analysis are the ones containing the '_2screen.rds' in its file text. All screening performances analyses from the Campbell Systematic Reviews can be found in the **Analyze single screen performance.R** file in the **single screener data** folder.
+
+  
+## NIPH folder
+The screening data used for analyzing the screening performance in the NIPH (Norwegian Institute of Public Health) reviews is stored in the NIPH folder. The NIPH folder contains the following subfolders: 
+\ 
+
+  * **Data:** contains the single screeners performance data  
+  * **First episode psychosis:** contains all material for Jardim et al. [-@Jardim2021] 
+  * **Joint custody:** contains all material for Johansen et al. [-@Johansen2022] 
+  * **Psychological debriefing:** contains all material for Meneses Echavez et al. [-@MenesesEchavez2022] 
+  * **Rotator cuff tears:** contains all material for Evensen et al. [-@Evensen2023] 
+  * **Self help apps:** NOT USED. Represent an evidence-and-gap-map.
+  * **WHO QES Chronic Pain:** contains all material for Ames et al. [-@Ames2024] 
+  * **Womens health:** Not used
+  
+Each folder contains the raw html screening data behind the review and the RIS files for the included and excluded studies.
+\ 
+
+All screening performances analyses from the NIPH reviews can be found in the **NIPH dada and analysis.R** file. 
+
+# Irrelavant Head Folders
+
+* **Adult child ratio qualitative:** Not independently doubled screened
+* **12-step:** Not independently doubled screened
+* **co-teaching:** Not possible to obtained individual screener performance. Was extracted from Covidence
+  
+  
+# References
