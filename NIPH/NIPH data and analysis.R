@@ -1559,7 +1559,7 @@ vline_dat <-
 
 
 # Recalculate order variable via metafor
-#png("NIPH/NIPH res figure.png", height = 5, width = 11, unit = "in", res = 600)
+png("NIPH/NIPH res figure.png", height = 4, width = 7.5, unit = "in", res = 600)
   dat_prop |> 
   mutate(role = "Researcher") |> 
   mutate(
@@ -1583,4 +1583,4 @@ vline_dat <-
     axis.title.x = element_text(vjust = -0.75)
   ) +
   labs(x = "Estimate", y = "NIPH Systematic Review")
-#dev.off()
+dev.off()

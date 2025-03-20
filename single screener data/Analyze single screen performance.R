@@ -339,7 +339,8 @@ vline_dat <-
 dat_prop |> 
 mutate(
   role = if_else(role == "Assistant", "Assistant / Non-Content Expert", role),
-  role = factor(role, levels = c("Assistant / Non-Content Expert", "Author"))
+  role = factor(role, levels = c("Assistant / Non-Content Expert", "Author")),
+  review_authors = if_else(review_authors == "Filges et al. (forthcoming)", "Filges, Smedslund et al. (2023)", review_authors)
 ) |> 
 mutate(
   order_var = weighted.mean(val, N),
